@@ -24,6 +24,7 @@ RUN conda update -y conda
 RUN conda install -c conda-forge gdal=2.4.2
 RUN conda install -c conda-forge python-fmask
 RUN conda install -c conda-forge ruamel.yaml=0.15.96
+RUN conda install -c conda-forge pyproj=1.9.5.1 
 
 # INSTALL GSUTIL
 # Downloading gcloud package

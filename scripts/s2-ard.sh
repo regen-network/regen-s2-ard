@@ -1,8 +1,6 @@
 #!/bin/bash
 
-# bash s2-ard.sh S2B_MSIL1C_20190908T154809_N0208_R054_T18TUK_20190908T192723 /data/2019/Regen.Network/ard/config.yml /data/2019/Regen.Network/ard/aoi.geojson
-
-# docker pull s2-ard
+# docker pull s2-ard / docker build -t s2-ard .
 
 docker run --name s2-ard -dit s2-ard
 
@@ -21,7 +19,5 @@ else
       echo "aoi.geojson file copied"
       docker cp $3 s2-ard:app
 fi
-
-# echo "docker run -it -v $(pwd):/output --rm s2-ard --tile "$1""
 
 docker exec -it s2-ard bash -c "python /app/ard.py --tile "$1""

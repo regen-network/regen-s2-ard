@@ -14,9 +14,9 @@ RUN curl -o /usr/local/etc/sen2cor.run http://step.esa.int/thirdparties/sen2cor/
 ENV PATH=$PATH:/Sen2Cor-02.08.00-Linux64/bin
 
 # INSTALL MINICONDA
-RUN curl -LO http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
-RUN bash Miniconda-latest-Linux-x86_64.sh -p /miniconda -b
-RUN rm Miniconda-latest-Linux-x86_64.sh
+RUN curl -LO http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+RUN bash Miniconda3-latest-Linux-x86_64.sh -p /miniconda -b
+RUN rm Miniconda3-latest-Linux-x86_64.sh
 ENV PATH=/miniconda/bin:${PATH}
 RUN conda update -y conda
 
@@ -24,7 +24,7 @@ RUN conda update -y conda
 RUN conda install -c conda-forge gdal=2.4.2
 RUN conda install -c conda-forge python-fmask
 RUN conda install -c conda-forge ruamel.yaml=0.15.96
-RUN conda install -c conda-forge pyproj=1.9.5.1 
+#RUN conda install -c conda-forge pyproj=1.9.5.1 
 
 # INSTALL GSUTIL
 # Downloading gcloud package

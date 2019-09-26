@@ -1,0 +1,16 @@
+# defining the ard operations
+ard-settings:
+  "atm-corr" : false
+  "cloud-mask" : false
+  "stack" : true
+  "calibrate" : false
+  "clip" : false
+  "derived-index" : false
+
+cloud-mask-settings:
+  "sen2cor-scl-codes" : []
+  "fmask-codes" : []
+
+output-image-settings:
+  "bands" : ["B08", "B04", "B03"]
+  "resampling-method" : "cubic"

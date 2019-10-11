@@ -82,7 +82,7 @@ class ProcessTile():
                 ref_bands[key] = self.resample_image(ref_bands[key], resampled_image, self.image_properties)
 
         # DERIVING INDICES
-        if self.config.ard_settings["derived-index"]:
+        if self.config.ard_settings["derived-index"] == True:
             print('DERIVE INDEX / INDICES')
             vi_band_dict = {
                             'ndvi' : ['B08', 'B04'],

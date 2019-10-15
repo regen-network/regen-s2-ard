@@ -68,7 +68,7 @@ class ConfigReader(object):
                 self.output_image_settings['input-features'] = False
 
             if (self.ard_settings['clip'] == True) and (self.output_image_settings['input-features'] == False):
-                print('in YAML file input_features as the cropt-to-cutline is not defined')
+                print('in YAML file input_features as the crop-to-cutline is not defined')
                 exit(1)
 
         except Exception:

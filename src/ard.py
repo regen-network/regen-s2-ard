@@ -446,28 +446,35 @@ if __name__ == "__main__":
 
     # WORKDIR
     work_dir = "/work"
+    print(args.tile)
 
     # GOOGLE CLOUD PLATFORM
-    # join .SAFE extension / suffix to tile name
-    args.tile = '.'.join([args.tile, 'SAFE'])
-
-    # DOWNLOADING SENTINEL-2 SAFE DATA PRODUCT
-    print('DOWNLOADING SENTINEL-2 DATA PRODUCT')
-    input_tile = work_dir + os.sep + args.tile
-    print(input_tile)
-    bucket_url = get_bucket_url(args.tile)
-    system_command = ['gsutil', '-m', 'cp', '-r', bucket_url, work_dir]
-    system_call(system_command)
+    if os.path.isdir(args.tile) == False:
+        # join .SAFE extension / suffix to tile name
+        args.tile = '.'.join([args.tile, 'SAFE'])
+        input_tile = work_dir + os.sep + args.tile
+        print(input_tile)
+        
+        # DOWNLOADING SENTINEL-2 SAFE DATA PRODUCT
+        print('DOWNLOADING SENTINEL-2 DATA PRODUCT')
+        bucket_url = get_bucket_url(args.tile)
+        system_command = ['gsutil', '-m', 'cp', '-r', bucket_url, work_dir]
+        system_call(system_command)
     
-    # missing subdirectories in Sentinel-2 L1C Bucket : HTML, AUX_DATA if data produt coming from google cloud
-    html_dir = work_dir + os.sep + args.tile + os.sep + 'HTML'
-    if not os.path.exists(html_dir):
-        os.mkdir(html_dir)
+        # missing subdirectories in Sentinel-2 L1C Bucket : HTML, AUX_DATA if data produt coming from google cloud
+        html_dir = work_dir + os.sep + args.tile + os.sep + 'HTML'
+        if not os.path.exists(html_dir):
+            os.mkdir(html_dir)
 
-    aux_data_dir = work_dir + os.sep + args.tile + os.sep + 'AUX_DATA'
-    if not os.path.exists(aux_data_dir):
-        os.mkdir(aux_data_dir)
-    # GOOGLE CLOUD PLATFORM 
+        aux_data_dir = work_dir + os.sep + args.tile + os.sep + 'AUX_DATA'
+        if not os.path.exists(aux_data_dir):
+            os.mkdir(aux_data_dir)
+        # GOOGLE CLOUD PLATFORM
 
+    if os.path.isdir(args.tile) == True:
+        input_tile = args.tile
+    
+    print(input_tile)
+    
     pg = ProcessTile(config_file, aoi_file)
     pg.process_tile(input_tile)

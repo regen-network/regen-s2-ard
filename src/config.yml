@@ -4,7 +4,7 @@ ard-settings:
   "cloud-mask" : true
   "stack" : true
   "calibrate" : true
-  "clip" : true
+  "clip" : false
   "derived-index" : true
 
 cloud-mask-settings:

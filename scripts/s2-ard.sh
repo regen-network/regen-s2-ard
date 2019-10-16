@@ -32,4 +32,11 @@ else
       docker cp $3 s2-ard:app
 fi
 
-#docker exec -it s2-ard bash -c "python /app/ard.py --tile "$tile""
+# execute pre-processing of the data product (tile)
+docker exec -it s2-ard bash -c "python /app/ard.py --tile "$tile""
+
+# copy output files/folders to host from s2-ard container
+docker cp s2-ard:output $PWD
+
+# remove files/folder from work and output directory on container
+docker exec s2-ard sh -c 'rm -rf /output/* /work/*'

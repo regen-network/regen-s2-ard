@@ -53,10 +53,18 @@ class ProcessTile():
     def process_tile(self, input_tile):
         # getting bands pathes
         tile_name = input_tile
-        metadata_xml = self._get_metadata_xml(input_tile)
-        all_bands = self._get_toa_band_pathes(metadata_xml)
-        ref_bands = self._subset_toa_bands(self.bands, all_bands)
-
+        
+        # input product type toa (L1C) or boa (L2A)
+        producttype = os.path.basename(input_tile)[7:10]
+        if producttype == 'L2A':
+            all_bands = self._get_boa_band_pathes(self._get_metadata_xml(tile_name))
+            ref_bands = self._subset_boa_bands(self.bands, all_bands)
+        
+        if producttype == 'L1C':
+            metadata_xml = self._get_metadata_xml(input_tile)
+            all_bands = self._get_toa_band_pathes(metadata_xml)
+            ref_bands = self._subset_toa_bands(self.bands, all_bands)
+        
         # ATMOSPHERIC CORRECTION - SEN2COR
         if self.config.ard_settings['atm-corr'] == True:
             print('RUNNING ATMOSPHERIC CORRECTION - SEN2COR')
@@ -72,7 +80,7 @@ class ProcessTile():
         # if output spatial reference is missing epsg code is tile epsg code
         if self.image_properties['t_srs'] == False:
             self.image_properties['t_srs'] = self.get_band_meta(ref_bands['B04'])['epsg']
-
+        
         # RESAMPLING TO TARGET RESOLUTION
         # resampling to target resolution if bands/image does not meet target resolution
         for key in self.bands:
@@ -95,11 +103,12 @@ class ProcessTile():
             for index in self.derived_indices:
                 print(index, vi_band_dict[index])
 
-                if self.config.ard_settings['atm-corr'] != True:
-                    vi_bands = self._subset_toa_bands(vi_band_dict[index], all_bands)
-                    pprint(vi_bands)
+                if self.config.ard_settings['atm-corr'] == False:
+                    if producttype == 'L1C':
+                        vi_bands = self._subset_toa_bands(vi_band_dict[index], all_bands)
+                        pprint(vi_bands)
 
-                if self.config.ard_settings['atm-corr'] == True:
+                if self.config.ard_settings['atm-corr'] == True or producttype == 'L2A':
                     vi_bands = self._subset_boa_bands(vi_band_dict[index], all_bands)
                     pprint(vi_bands)
                     
@@ -122,7 +131,7 @@ class ProcessTile():
         # SEN2COR CLOUD MASKING ONLY
         if (self.config.ard_settings['cloud-mask'] == True) and (self.config.cloud_mask_settings['sen2cor-scl-codes']):
 
-            if (self.config.ard_settings['atm-corr'] == False):
+            if (self.config.ard_settings['atm-corr'] == False) and (producttype == 'L1C'):
                 # running sen2cor scene classification only
                 print('RUNNING SEN2COR SCENE CLASSIFICATION ONLY')
                 system_command = ['L2A_Process', "--sc_only", input_tile]
@@ -134,7 +143,9 @@ class ProcessTile():
                 # changing resampling to near since cloud mask image contains discrete values
                 _image_properties = self.image_properties.copy()
                 _image_properties["resampling_method"] = "near"
-                scl_image = self.resample_image(scl_image, 'resampled', _image_properties) 
+                
+                resampled_image = self.rename_image(work_dir, '.tif', os.path.split(os.path.splitext(scl_image)[0])[1], 'resampled')
+                scl_image = self.resample_image(scl_image, resampled_image, _image_properties) 
 
             mask = self.binary_mask(self.read_band(scl_image), self.config.cloud_mask_settings['sen2cor-scl-codes'])
             
@@ -160,7 +171,7 @@ class ProcessTile():
                     derived_bands[key] = masked_image
 
         # FMASK CLOUD MASKING
-        if (self.config.ard_settings['cloud-mask'] == True) and (self.config.cloud_mask_settings['fmask-codes']):
+        if (self.config.ard_settings['cloud-mask'] == True) and (self.config.cloud_mask_settings['fmask-codes']) and (producttype == 'L1C'):
             print('RUNNING FMASK CLOUD MASK')
             # running fmask cloud masking
             fmask_image = work_dir + os.sep + '_'.join([os.path.splitext(args.tile)[0], 'FMASK']) + '.tif'
@@ -202,7 +213,6 @@ class ProcessTile():
                 ref_bands[key] = self.calibrate('.'.join([ref_bands[key]]))
 
         # REPROJECTION
-        print('REPROJECTION')
         # ref images
         for key in ref_bands:
             if self.get_band_meta(ref_bands[key])['epsg'] != str(self.image_properties['t_srs']):

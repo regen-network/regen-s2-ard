@@ -32,4 +32,4 @@ else
       docker cp $3 s2-ard:app
 fi
 
-docker exec -it s2-ard bash -c "python /app/ard.py --tile "$tile""
+#docker exec -it s2-ard bash -c "python /app/ard.py --tile "$tile""

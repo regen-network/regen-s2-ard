@@ -18,7 +18,7 @@ RUN curl -LO http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.s
 RUN bash Miniconda3-latest-Linux-x86_64.sh -p /miniconda -b
 RUN rm Miniconda3-latest-Linux-x86_64.sh
 ENV PATH=/miniconda/bin:${PATH}
-RUN conda update -y conda
+#RUN conda update -y conda
 
 # CONDA INSTALL PACKAGES
 RUN conda install -c conda-forge gdal=2.4.2

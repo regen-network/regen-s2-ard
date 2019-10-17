@@ -4,12 +4,13 @@
 
 docker run --name s2-ard -dit s2-ard
 
-# Parse named argument options
+# parse named argument options
 while :; do
     case $1 in
         -t|--tile)
                 if [ "$2" ]; then
                         TILE=$2
+			echo "TILE : $TILE"
                         shift
                 else
                         die 'ERROR: "--tile" requires a non-empty option argument.'
@@ -18,6 +19,7 @@ while :; do
         -c|--config)
                 if [ "$2" ]; then
                         CONFIG=$2
+			echo "Config : $CONFIG"
                         shift
                 else
                         die 'ERROR: "--config" requires a non-empty option argument.'
@@ -26,6 +28,7 @@ while :; do
         -a|--aoi)
                 if [ "$2" ]; then
                         AOI=$2
+			echo "AOI : $AOI"
                         shift
                 else
                         die 'ERROR: "--aoi" requires a non-empty option argument.'
@@ -37,10 +40,6 @@ while :; do
 
     shift
 done
-
-echo "Tile : $TILE"
-echo "Config : $CONFIG"
-echo "AOI : $AOI"
 
 if [[ -d $TILE ]];
 then

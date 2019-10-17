@@ -47,23 +47,23 @@ then
       docker cp $TILE s2-ard:work
       tile="/work/"`basename "$TILE"`
 else
-      echo "not SAFE Directory"
+      echo "Not SAFE Directory"
 fi
 
 if [ -z "$CONFIG" ]
 then
-      echo "no config.yml file copied"
+      echo "No CONFIG file copied"
 else
       echo "Copying config.yml file"
-      docker cp $CONFIG s2-ard:app
+      docker cp $CONFIG s2-ard:app/config.yml
 fi
 
 if [ -z "$3" ]
 then
-      echo "no aoi.geojson file given"
+      echo "No AOI file given"
 else
-      echo "Copying aoi.geojson file"
-      docker cp $AOI s2-ard:app
+      echo "Copying AOI file"
+      docker cp $AOI s2-ard:app/aoi.geojson
 fi
 
 # execute pre-processing of the data product (tile)

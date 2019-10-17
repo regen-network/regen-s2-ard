@@ -174,7 +174,7 @@ class ProcessTile():
         if (self.config.ard_settings['cloud-mask'] == True) and (self.config.cloud_mask_settings['fmask-codes']) and (producttype == 'L1C'):
             print('RUNNING FMASK CLOUD MASK')
             # running fmask cloud masking
-            fmask_image = work_dir + os.sep + '_'.join([os.path.splitext(args.tile)[0], 'FMASK']) + '.tif'
+            fmask_image = work_dir + os.sep + '_'.join([os.path.splitext(os.path.split(args.tile)[1])[0], 'FMASK']) + '.tif'
             system_command = ['fmask_sentinel2Stacked.py', '-o', fmask_image, '--safedir', input_tile]
             system_call(system_command)
 
@@ -457,7 +457,7 @@ if __name__ == "__main__":
     # WORKDIR
     work_dir = "/work"
     print(args.tile)
-
+    
     # GOOGLE CLOUD PLATFORM
     if os.path.isdir(args.tile) == False:
         # join .SAFE extension / suffix to tile name
@@ -485,6 +485,6 @@ if __name__ == "__main__":
         input_tile = args.tile
     
     print(input_tile)
-    
+     
     pg = ProcessTile(config_file, aoi_file)
     pg.process_tile(input_tile)

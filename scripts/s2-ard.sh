@@ -45,9 +45,9 @@ if [[ -d $TILE ]];
 then
       echo "Copying SAFE Directory"
       docker cp $TILE s2-ard:work
-      tile="/work/"`basename "$TILE"`
+      TILE="/work/"`basename "$TILE"`
 else
-      echo "Not SAFE Directory"
+      echo "Not a SAFE Directory"
 fi
 
 if [ -z "$CONFIG" ]
@@ -60,17 +60,17 @@ fi
 
 if [ -z "$3" ]
 then
-      echo "No AOI file given"
+      echo "No AOI file copied"
 else
       echo "Copying AOI file"
       docker cp $AOI s2-ard:app/aoi.geojson
 fi
 
 # execute pre-processing of the data product (tile)
-#docker exec -it s2-ard bash -c "python /app/ard.py --tile "$TILE""
+docker exec -it s2-ard bash -c "python /app/ard.py --tile "$TILE""
 
 # copy output files/folders to host from s2-ard container
-#docker cp s2-ard:output $PWD
+docker cp s2-ard:output $PWD
 
 # remove files/folder from work and output directory on container
-#docker exec s2-ard sh -c 'rm -rf /output/* /work/*'
+docker exec s2-ard sh -c 'rm -rf /output/* /work/*'

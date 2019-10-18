@@ -178,6 +178,10 @@ class ProcessTile():
             system_command = ['fmask_sentinel2Stacked.py', '-o', fmask_image, '--safedir', input_tile]
             system_call(system_command)
 
+            # copying fmask image to output dir
+            output_image = self.rename_image(self.output_dir, '.tif', os.path.split(os.path.splitext(fmask_image)[0])[1])
+            copyfile(fmask_image, output_image)
+
             # resampling to target resolution if bands/image does not meet target resolution
             if self.get_band_meta(fmask_image)['geotransform'][1] != self.image_properties['resolution']:
                 # changing resampling to near since cloud mask image contains discrete values

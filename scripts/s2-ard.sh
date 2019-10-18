@@ -58,7 +58,7 @@ else
       docker cp $CONFIG s2-ard:app/config.yml
 fi
 
-if [ -z "$3" ]
+if [ -z "$AOI" ]
 then
       echo "No AOI file copied"
 else

@@ -58,13 +58,11 @@ class ProcessTile():
         producttype = os.path.basename(input_tile)[7:10]
         if producttype == 'L2A':
             all_bands = self._get_boa_band_pathes(self._get_metadata_xml(tile_name))
-            pprint(all_bands)
             ref_bands = self._subset_boa_bands(self.bands, all_bands)
             
         if producttype == 'L1C':
             metadata_xml = self._get_metadata_xml(input_tile)
             all_bands = self._get_toa_band_pathes(metadata_xml)
-            pprint(all_bands)
             ref_bands = self._subset_toa_bands(self.bands, all_bands)
         
         # ATMOSPHERIC CORRECTION - SEN2COR
@@ -81,7 +79,7 @@ class ProcessTile():
 
         # if output spatial reference is missing epsg code is tile epsg code
         if self.image_properties['t_srs'] == False:
-            self.image_properties['t_srs'] = self.get_band_meta(all_bands['B04'])['epsg']
+            self.image_properties['t_srs'] = self.get_band_meta(all_bands[list(all_bands.keys())[0]])['epsg']
         
         # RESAMPLING TO TARGET RESOLUTION
         # resampling to target resolution if bands/image does not meet target resolution

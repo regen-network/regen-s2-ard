@@ -3,7 +3,7 @@ ard-settings:
   "atm-corr" : false
   "cloud-mask" : true
   "stack" : true
-  "calibrate" : true
+  "calibrate" : false
   "clip" : false
   "derived-index" : true
 
@@ -14,12 +14,12 @@ cloud-mask-settings:
 
 output-image-settings:
   # bands to stack 
-  "bands" : ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
+  "bands" : ["B11", "B08", "B02"]
   # derived indices to calculate
   "vi" : ["ndvi", "ndwi", "ndti", "crc"] 
   # target spatial reference system - epsg code i. e. 3857
   "t-srs" : False
   # output image resolution
-  "resolution" : 10
+  "resolution" : 20
   # method for resampling bands when resolution changes or reprojection  
-  "resampling-method" : "near"
+  "resampling-method" : "cubic"

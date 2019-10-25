@@ -6,7 +6,7 @@ regen-s2-ard (Regen Network Sentinel-2 Analysis Ready Data) is an open-source Se
 
 The toolbox provides a modular approach to automate the pre-processing of any single Sentinel-2 data product. 
 
-It allows users to begin with a single tile name (i.e. S2B_MSIL1C_20190927T000239_N0208_R030_T56JMP_20190927T011718) and in one command produce ARD Sentinel-2 end products.
+It allows users to begin with a single tile name (i.e. S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919) and in one command produce ARD Sentinel-2 end products.
 
 The regen-s2-ard Docker bundles different open-source software components together such as the [European Space Agency's Sen2Cor](https://step.esa.int/main/third-party-plugins-2/sen2cor/), [FMask](http://www.pythonfmask.org/en/latest/), Anaconda environment, GDAL, gsutil etc. with a recipe for processing ARD products from start to finish.
 
@@ -124,3 +124,60 @@ output-image-settings:
    S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_crc.tif
    ```
 **Note:** *See the **Default config.yml** section. This is the default configuration of the toolbox. There are three different ARD operations defined: Stacking, Cloud Masking and Deriving Indices*   
+
+### Example-2
+
+1. Find the name of the L1C tile to process from [ESA Copernicus SciHub](https://scihub.copernicus.eu/dhus/#/home).
+   
+   *The example below uses S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919 tile*.
+
+1. Open the Terminal app
+
+1. Create a new configuration YAML file (new_config.yml) with the following content. (The name of the configuration file can be anything.)
+
+``` yaml
+# defining the ard operations
+ard-settings:
+  "atm-corr" : true
+  "cloud-mask" : true
+  "stack" : true
+  "calibrate" : false
+  "clip" : false
+  "derived-index" : true
+
+# pixel values in mask to keep (clear pixels)   
+cloud-mask-settings:
+  "sen2cor-scl-codes" : [4, 5]
+  #"fmask-codes" : [1]
+
+output-image-settings:
+  # bands to stack 
+  "bands" : ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
+  # derived indices to calculate
+  "vi" : ["ndvi"] 
+  # target spatial reference system - epsg code i. e. 3857
+  "t-srs" : False
+  # output image resolution
+  "resolution" : 20
+  # method for resampling bands when resolution changes or reprojection  
+  "resampling-method" : "cubic"
+```
+
+1. In your Terminal window, navigate to the directory where **s2-ard.sh** is saved.
+   
+      *For example, if you saved the script to your Downloads directory, type:*
+      ```
+      cd ~/Downloads
+      ```
+1. Execute **s2-ard.sh** with the tile name
+   ```
+   sh s2-ard.sh --tile S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919 --config new_config.yml
+   ```
+   Processing can take up about an hour this case depending on the internet connection, and computer resources. Atmospheric Correction runs about ~45 minutes.
+
+1. Upon completion, ARD products will appear in the directory where **s2-ard.sh** was executed under a new folder called **output**
+   ```
+   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_stacked.tif
+   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_ndvi.tif
+   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_crc.tif
+   ```

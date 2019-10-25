@@ -133,6 +133,13 @@ output-image-settings:
 
 1. Open the Terminal app
 
+1. In your Terminal window, navigate to the directory where **s2-ard.sh** is saved.
+   
+      *For example, if you saved the script to your Downloads directory, type:*
+      ```
+      cd ~/Downloads
+      ```
+
 1. Create a new configuration YAML file (new_config.yml) with the following content. (The name of the configuration file can be anything.)
 
 ``` yaml
@@ -163,12 +170,6 @@ output-image-settings:
   "resampling-method" : "cubic"
 ```
 
-1. In your Terminal window, navigate to the directory where **s2-ard.sh** is saved.
-   
-      *For example, if you saved the script to your Downloads directory, type:*
-      ```
-      cd ~/Downloads
-      ```
 1. Execute **s2-ard.sh** with the tile name
    ```
    sh s2-ard.sh --tile S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919 --config new_config.yml

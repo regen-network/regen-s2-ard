@@ -38,7 +38,7 @@ This ARD toolbox draws inspiration from and It complements to the [Alaskan Satel
 sh s2-ard.sh --tile TILE [--config CONFIG] [--aoi AOI]
 ```
 ### Default config.yml
-```
+``` yaml
 # defining the ard operations
 ard-settings:
   "atm-corr" : false

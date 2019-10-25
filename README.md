@@ -24,7 +24,7 @@ This ARD toolbox draws inspiration from and It complements to the [Alaskan Satel
 | **Stacking** | Reflectance Bands can be merged into a single GTiff file |
 | **Deriving Indices** | NDVI, NDWI, CRC, NDTI |
 
-**Note:** It is also possible to input an already downloaded data product (L1C or L2A) and to perform a reasonable set of operations on that unzipped SAFE data product. *For example You can download data product from [ESA Copernicus SciHub](https://scihub.copernicus.eu/dhus/#/home) manually or using API interfaces such as the excellent [sentinelsat](https://github.com/sentinelsat/sentinelsat) and input the path of the downloaded data product*
+**Note:** *It is also possible to input an already downloaded data product (L1C or L2A) and to perform a reasonable set of operations on that unzipped SAFE data product. For example: You can download data product from [ESA Copernicus SciHub](https://scihub.copernicus.eu/dhus/#/home) manually or using API interfaces such as the excellent [sentinelsat](https://github.com/sentinelsat/sentinelsat) and input the path of the downloaded data product*
 
 ## Input options
 
@@ -36,6 +36,34 @@ This ARD toolbox draws inspiration from and It complements to the [Alaskan Satel
 
 ```
 sh s2-ard.sh --tile TILE [--config CONFIG] [--aoi AOI]
+```
+### Default config.yml
+```
+# defining the ard operations
+ard-settings:
+  "atm-corr" : false
+  "cloud-mask" : true
+  "stack" : true
+  "calibrate" : false
+  "clip" : false
+  "derived-index" : true
+
+# pixel values in mask to keep (clear pixels)   
+cloud-mask-settings:
+  "sen2cor-scl-codes" : [4, 5]
+  "fmask-codes" : [1]
+
+output-image-settings:
+  # bands to stack 
+  "bands" : ["B11", "B08", "B02"]
+  # derived indices to calculate
+  "vi" : ["ndvi", "ndwi", "ndti", "crc"] 
+  # target spatial reference system - epsg code i. e. 3857
+  "t-srs" : False
+  # output image resolution
+  "resolution" : 20
+  # method for resampling bands when resolution changes or reprojection  
+  "resampling-method" : "cubic"
 ```
 
 ## Output Products

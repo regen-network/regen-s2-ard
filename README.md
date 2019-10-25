@@ -65,7 +65,17 @@ output-image-settings:
   # method for resampling bands when resolution changes or reprojection  
   "resampling-method" : "cubic"
 ```
+* There are three section in the YAML file:
+  - **ard-settings**
+  These are True or False key: value pairs representing the performed ARD operations.
+  
+  - **cloud-mask-settings**
+  If Cloud Masking is defined as True we need to define the pixel value(s) in the cloud mask raster we would like to keep
+  
+  - **output-image-settings**
+  In this section we can define the bands we wanna subset from the L1C or L2A input data product and we can set the output image settings such as target spatial reference system, target resolution, resampling method, derived indices. Currently 4 different derived indices can be calculated : NDVI, NDWI, NDTI and CRC.
 
+### 
 ## Output Products
 * GeoTIFF image with 
     - Optional pixel spacing (default is 20 m)
@@ -83,4 +93,34 @@ output-image-settings:
 
 ## Usage
 
-### Example 1
+### Example-1
+
+1. Find the name of the L1C tile to process from [ESA Copernicus SciHub](https://scihub.copernicus.eu/dhus/#/home).
+   
+   *The example below uses S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919 tile*.
+
+1. Open the Terminal app
+   
+1. In your Terminal window, navigate to the directory where **s2-ard.sh** is saved.
+   
+      *For example, if you saved the script to your Downloads directory, type:*
+      ```
+      cd ~/Downloads
+      ```
+
+1. Execute **s2-ard.sh** with the tile name
+   ```
+   sh s2-ard.sh --tile S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919
+   ```
+   Processing can take up from a few minutes to about an hour depending on the config.yml ard settings, internet connection, and computer resources.
+
+1. Upon completion, ARD products will appear in the directory where **s2-ard.sh** was executed under a new folder called **output**
+   ```
+   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_stacked.tif
+   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_FMASK.tif
+   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_ndvi.tif
+   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_ndwi.tif
+   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_ndti.tif
+   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_crc.tif
+   ```
+**Note:** *See the **Default config.yml** section. This is the default configuration of the toolbox. There are three different ARD operations defined: Stacking, Cloud Masking and Deriving Indices*   

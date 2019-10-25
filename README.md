@@ -50,7 +50,7 @@ ard-settings:
 
 # pixel values in mask to keep (clear pixels)   
 cloud-mask-settings:
-  "sen2cor-scl-codes" : [4, 5]
+  #"sen2cor-scl-codes" : [4, 5]
   "fmask-codes" : [1]
 
 output-image-settings:

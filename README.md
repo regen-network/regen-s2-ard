@@ -8,9 +8,9 @@ The toolbox provides a modular approach to automate the pre-processing of any si
 
 It allows users to begin with a single tile name (i.e. S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919) and in one command produce ARD Sentinel-2 end products.
 
-The regen-s2-ard Docker bundles different open-source software components together such as the [European Space Agency's Sen2Cor](https://step.esa.int/main/third-party-plugins-2/sen2cor/), [FMask](http://www.pythonfmask.org/en/latest/), Anaconda environment, GDAL, gsutil etc. with a recipe for processing ARD products from start to finish.
+The regen-s2-ard Docker bundles different open-source software components together such as the [European Space Agency's Sen2Cor](https://step.esa.int/main/third-party-plugins-2/sen2cor/), [FMask](http://www.pythonfmask.org/en/latest/), Anaconda, GDAL, gsutil etc. with a recipe for processing ARD products from start to finish.
 
-This ARD toolbox draws inspiration from and It complements to the [Alaskan Satellite Facility's Sentinel-1 toolbox](https://github.com/asfadmin/grfn-s1tbx-rtc) which is a Docker toolbox integrating the ESA SNAP toolbox to pre-process [Radiometrically Terrain Corrected (RTC) S1 SAR data](https://www.youtube.com/watch?v=aZ4xLBrxUow).
+This ARD toolbox draws inspiration from and It complements to the [Alaskan Satellite Facility's Sentinel-1 toolbox](https://github.com/asfadmin/grfn-s1tbx-rtc) which is a Docker toolbox integrating the [ESA SNAP toolbox](https://step.esa.int/main/toolboxes/snap/) to pre-process [Radiometrically Terrain Corrected (RTC) Sentinel-1 SAR data](https://www.youtube.com/watch?v=aZ4xLBrxUow).
 
 ## Modules (ARD Operations)
 
@@ -37,7 +37,8 @@ This ARD toolbox draws inspiration from and It complements to the [Alaskan Satel
 ```
 sh s2-ard.sh --tile TILE [--config CONFIG] [--aoi AOI]
 ```
-### Default config.yml
+### Configuration
+* Default config.yml
 ``` yaml
 # defining the ard operations
 ard-settings:
@@ -165,7 +166,7 @@ output-image-settings:
   # target spatial reference system - epsg code i. e. 3857
   "t-srs" : False
   # output image resolution
-  "resolution" : 20
+  "resolution" : 30
   # method for resampling bands when resolution changes or reprojection  
   "resampling-method" : "cubic"
 ```
@@ -178,7 +179,7 @@ output-image-settings:
 
 1. Upon completion, ARD products will appear in the directory where **s2-ard.sh** was executed under a new folder called **output**
    ```
-   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_stacked.tif
-   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_ndvi.tif
-   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_crc.tif
+   S2A_MSIL2A_20190919T175011_N9999_R141_T13TDE_20191026T081601_ndvi.tif
+   S2A_MSIL2A_20190919T175011_N9999_R141_T13TDE_20191026T081601_stacked.tif
+   S2A_MSIL2A_20190919T175011_N9999_R141_T13TDE_20191026T081601.SAFE
    ```

@@ -1,0 +1,25 @@
+# defining the ard operations
+ard-settings:
+  "atm-corr" : false
+  "cloud-mask" : true
+  "stack" : true
+  "calibrate" : false
+  "clip" : false
+  "derived-index" : true
+
+# pixel values in mask to keep (clear pixels)   
+cloud-mask-settings:
+  "sen2cor-scl-codes" : [4, 5]
+  "fmask-codes" : [1]
+
+output-image-settings:
+  # bands to stack 
+  "bands" : ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
+  # derived indices to calculate
+  "vi" : ["ndvi"] 
+  # target spatial reference system - epsg code i. e. 3857
+  "t-srs" : False
+  # output image resolution
+  "resolution" : 20
+  # method for resampling bands when resolution changes or reprojection  
+  "resampling-method" : "cubic"

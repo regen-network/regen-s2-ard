@@ -41,7 +41,7 @@ while :; do
     shift
 done
 
-if [[ -d $TILE ]];
+if [ -d $TILE ];
 then
       echo "Copying SAFE Directory"
       docker cp $TILE s2-ard:work

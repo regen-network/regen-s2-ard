@@ -116,14 +116,17 @@ output-image-settings:
    Processing can take up from a few minutes to about an hour depending on the config.yml ard settings, internet connection, and computer resources.
 
 1. Upon completion, ARD products will appear in the directory where **s2-ard.sh** was executed under a new folder called **output**
-   ```
-   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_stacked.tif
-   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_FMASK.tif
-   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_ndvi.tif
-   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_ndwi.tif
-   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_ndti.tif
-   S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_crc.tif
-   ```
+
+``` bash
+├── output
+│   ├── S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_stacked.tif
+│   ├── S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_FMASK.tif
+│   ├── S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_ndvi.tif
+│   ├── S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_ndwi.tif
+│   ├── S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_ndti.tif
+│   ├── S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919_crc.tif
+```
+
 **Note:** *See the **Default config.yml** section. This is the default configuration of the toolbox. There are three different ARD operations defined: Stacking, Cloud Masking and Deriving Indices*   
 
 ### Example-2
@@ -178,8 +181,79 @@ output-image-settings:
    Processing can take up about an hour this case depending on the internet connection, and computer resources. Atmospheric Correction runs about ~45 minutes.
 
 1. Upon completion, ARD products will appear in the directory where **s2-ard.sh** was executed under a new folder called **output**
+
+``` bash
+├── output
+│   ├── S2A_MSIL2A_20190919T175011_N9999_R141_T13TDE_20191026T081601.SAFE
+│   ├── S2A_MSIL2A_20190919T175011_N9999_R141_T13TDE_20191026T081601_ndvi.tif
+│   ├── S2A_MSIL2A_20190919T175011_N9999_R141_T13TDE_20191026T081601_stacked.tif
+```
+
+### Example-3
+1. The */tests/example-3/forest_patches.geojson* file contians 5 forest polygons derived from [Corine Land Cover (CLC 2018) 100-m Raster](https://land.copernicus.eu/pan-european/corine-land-cover/clc2018?tab=download).
+
+1. Find the name of a L1C tile covering these forest patches to process from [ESA Copernicus SciHub](https://scihub.copernicus.eu/dhus/#/home).
+   
+   *The example below uses S2A_MSIL1C_20191002T094031_N0208_R036_T34TCT_20191002T111505 tile*.
+
+1. Open the Terminal app
+
+1. In your Terminal window, navigate to the directory where **s2-ard.sh** is saved.
+   
+      *For example, if you saved the script to your Downloads directory, type:*
+      ```
+      cd ~/Downloads
+      ```
+
+1. Create a new configuration YAML file (new_config.yml) with the following content. (The name of the configuration file can be anything.)
+
+``` yaml
+# defining the ard operations
+ard-settings:
+  "atm-corr" : false
+  "cloud-mask" : true
+  "stack" : false
+  "calibrate" : false
+  "clip" : true
+  "derived-index" : true
+
+# pixel values in mask to keep (clear pixels)   
+cloud-mask-settings:
+  "sen2cor-scl-codes" : [4, 5]
+  #"fmask-codes" : [1]
+
+output-image-settings:
+  # bands to stack 
+  "bands" : []
+  # derived indices to calculate
+  "vi" : ["ndvi"] 
+  # target spatial reference system - epsg code i. e. 3857
+  "t-srs" : 23700
+  # output image resolution
+  "resolution" : 10
+  # method for resampling bands when resolution changes or reprojection  
+  "resampling-method" : "near"
+```
+
+1. Execute **s2-ard.sh** with the tile name
    ```
-   S2A_MSIL2A_20190919T175011_N9999_R141_T13TDE_20191026T081601_ndvi.tif
-   S2A_MSIL2A_20190919T175011_N9999_R141_T13TDE_20191026T081601_stacked.tif
-   S2A_MSIL2A_20190919T175011_N9999_R141_T13TDE_20191026T081601.SAFE
+   sh s2-ard.sh --tile S2A_MSIL1C_20191002T094031_N0208_R036_T34TCT_20191002T111505 --config new_config.yml
    ```
+   Processing can take up about a few minutes this case depending on the internet connection, and computer resources.
+
+1. Upon completion, ARD products will appear in the directory where **s2-ard.sh** was executed under a new folder called **output**. The image chip output of the batch clipping is organized under the **clipped** sub-directory by feature id.
+
+``` bash
+
+├── output
+│   ├──clipped
+│   │   ├── 0
+│   │   │   ├── S2A_MSIL1C_20191002T094031_N0208_R036_T34TCT_20191002T111505_ndvi_FEATURE_ID_0_clipped.tif
+│   │   ├── 1
+│   │   │   ├── S2A_MSIL1C_20191002T094031_N0208_R036_T34TCT_20191002T111505_ndvi_FEATURE_ID_1_clipped.tif
+│   │   ├── 2
+│   │   │   ├── S2A_MSIL1C_20191002T094031_N0208_R036_T34TCT_20191002T111505_ndvi_FEATURE_ID_2_clipped.tif
+│   │   ├── 3
+│   │   │   ├── S2A_MSIL1C_20191002T094031_N0208_R036_T34TCT_20191002T111505_ndvi_FEATURE_ID_3_clipped.tif
+│   S2A_MSIL1C_20191002T094031_N0208_R036_T34TCT_20191002T111505_ndvi.tif
+```

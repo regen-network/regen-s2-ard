@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# docker pull s2-ard / docker build -t s2-ard .
+# pull Regen Network Sentinel-2 ARD 
+docker pull regennetwork/s2-ard
 
-# docker run --name s2-ard -dit s2-ard
+# run Regen Network Sentinel-2 ARD 
+docker run --name s2-ard -dit regennetwork/s2-ard
 
-docker pull regennetwork/regen-s2-ard
-
-# parse named argument options
+# parse named argument options --tile, --config and --aoi
 while :; do
     case $1 in
         -t|--tile)
@@ -43,6 +43,7 @@ while :; do
     shift
 done
 
+# copy config and aoi into running container 
 if [ -d $TILE ];
 then
       echo "Copying SAFE Directory"

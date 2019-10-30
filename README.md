@@ -24,7 +24,7 @@ This ARD toolbox draws inspiration from and It complements to the [Alaskan Satel
 | **Stacking** | Reflectance Bands can be merged into a single GTiff file |
 | **Deriving Indices** | NDVI, NDWI, CRC, NDTI |
 
-**Note:** *It is also possible to input an already downloaded data product (L1C or L2A) and to perform a reasonable set of operations on that unzipped SAFE data product. For example: You can download data product from [ESA Copernicus SciHub](https://scihub.copernicus.eu/dhus/#/home) manually or using API interfaces such as the excellent [sentinelsat](https://github.com/sentinelsat/sentinelsat) and input the path of the downloaded data product*
+**Note:** *It is also possible to input an already downloaded data product (L1C or L2A) and to perform a reasonable set of operations on that unzipped SAFE data product. For example: You can download data product from [ESA Copernicus SciHub](https://scihub.copernicus.eu/dhus/#/home) manually or using API interfaces such as [sentinelsat](https://github.com/sentinelsat/sentinelsat) and input the path of the downloaded data product*
 
 ## Input options
 
@@ -122,6 +122,13 @@ output-image-settings:
 
 ### Example-1
 
+**ARD Operations performed in this example:** 
+* **Cloud masking:** FMASK
+* **Stacking Bands :** Band-11 (SWIR), Band-08 (NIR), Band-02 (RED)
+* **Deriving Indices:** NDVI, NDWI, NDTI, CRC
+* **Spatial Resolution:** 20-m
+* **Resampling:** Cubic
+
 1. Find the name of the L1C tile to process from [ESA Copernicus SciHub](https://scihub.copernicus.eu/dhus/#/home).
    
    *The example below uses S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919 tile*.
@@ -139,7 +146,7 @@ output-image-settings:
    ```
    sh s2-ard.sh --tile S2A_MSIL1C_20190919T175011_N0208_R141_T13TDE_20190919T212919
    ```
-   Processing can take up from a few minutes to about an hour depending on the config.yml ard settings, internet connection, and computer resources.
+   Processing can take up from a few minutes to about an hour depending on the internet connection, and computer resources.
 
 1. Upon completion, ARD products will appear in the directory where **s2-ard.sh** was executed under a new folder called **output**
 
@@ -156,6 +163,14 @@ output-image-settings:
 **Note:** *See the **Default config.yml** section. This is the default configuration of the toolbox. There are three different ARD operations defined: Stacking, Cloud Masking and Deriving Indices*   
 
 ### Example-2
+
+**ARD Operations performed in this example:**
+* **Atmospheric Correction:** ESA Sen2Cor
+* **Cloud masking:** Sen2Cor Scene Classification
+* **Stacking Bands:** Band-02, Band-03, Band-04, Band-05, Band-06, Band-07, Band-08, Band-8A, Band-11, Band-12 
+* **Deriving Indices:** NDVI
+* **Spatial Resolution:** 30-m
+* **Resampling:** Cubic
 
 1. Find the name of the L1C tile to process from [ESA Copernicus SciHub](https://scihub.copernicus.eu/dhus/#/home).
    
@@ -216,7 +231,15 @@ output-image-settings:
 ```
 
 ### Example-3
-1. The */tests/example-3/forest_patches.geojson* file contians 4 forest polygons derived from [Corine Land Cover (CLC 2018) 100-m Raster](https://land.copernicus.eu/pan-european/corine-land-cover/clc2018?tab=download).
+
+**ARD Operations performed in this example:**
+* **Cloud masking:** Sen2Cor Scene Classification
+* **Deriving Indices:** NDVI
+* **Spatial Resolution:** 10-m
+* **Reprojection:** EPSG:23700 (Hungarian National Projection)
+* **Resampling:** Near
+
+1. The */tests/example-3/forest_patches.geojson* file contians 4 forest polygons derived from [Corine Land Cover (CLC 2018) 100-m Raster](https://land.copernicus.eu/pan-european/corine-land-cover/clc2018?tab=download) located near Budapest, Hungary.
 
 1. Find the name of a L1C tile covering these forest patches to process from [ESA Copernicus SciHub](https://scihub.copernicus.eu/dhus/#/home).
    

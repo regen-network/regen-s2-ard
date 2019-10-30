@@ -91,6 +91,32 @@ output-image-settings:
 * 20 GB of available hard disk space
 
 ## Installation
+<details><summary>Ubuntu 18.04</summary>
+
+1. Install Docker using apt
+   ```
+   sudo apt update
+   sudo apt install -y docker.io
+   ```
+1. Add your user to the docker group
+   ```
+   sudo usermod -aG docker $USER
+   ```
+1. Log out and log back in for the group change to take effect
+1. To verify everything is working run the docker command
+   ```
+   docker run hello-world
+   ```
+   Confirm you see the following in your output
+   ```
+   Hello from Docker!
+   This message shows that your installation appears to be working correctly.
+   ```
+1. Download **s2-ard.sh** to the directory where ARD products should be saved
+   ```
+   wget https://raw.githubusercontent.com/regen-network/regen-s2-ard/master/scripts/s2-ard.sh
+   ```
+</details>
 
 ## Usage
 
@@ -190,7 +216,7 @@ output-image-settings:
 ```
 
 ### Example-3
-1. The */tests/example-3/forest_patches.geojson* file contians 5 forest polygons derived from [Corine Land Cover (CLC 2018) 100-m Raster](https://land.copernicus.eu/pan-european/corine-land-cover/clc2018?tab=download).
+1. The */tests/example-3/forest_patches.geojson* file contians 4 forest polygons derived from [Corine Land Cover (CLC 2018) 100-m Raster](https://land.copernicus.eu/pan-european/corine-land-cover/clc2018?tab=download).
 
 1. Find the name of a L1C tile covering these forest patches to process from [ESA Copernicus SciHub](https://scihub.copernicus.eu/dhus/#/home).
    

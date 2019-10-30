@@ -123,7 +123,7 @@ output-image-settings:
 ### Example-1
 
 **ARD Operations performed in this example:** 
-* **Cloud masking:** FMASK
+* **Cloud Masking:** FMASK
 * **Stacking Bands :** Band-11 (SWIR), Band-08 (NIR), Band-02 (RED)
 * **Deriving Indices:** NDVI, NDWI, NDTI, CRC
 * **Spatial Resolution:** 20-m
@@ -166,9 +166,9 @@ output-image-settings:
 
 **ARD Operations performed in this example:**
 * **Atmospheric Correction:** ESA Sen2Cor
-* **Cloud masking:** Sen2Cor Scene Classification
+* **Cloud Masking:** Sen2Cor Scene Classification
 * **Stacking Bands:** Band-02, Band-03, Band-04, Band-05, Band-06, Band-07, Band-08, Band-8A, Band-11, Band-12 
-* **Deriving Indices:** NDVI
+* **Deriving Index:** NDVI
 * **Spatial Resolution:** 30-m
 * **Resampling:** Cubic
 
@@ -233,8 +233,8 @@ output-image-settings:
 ### Example-3
 
 **ARD Operations performed in this example:**
-* **Cloud masking:** Sen2Cor Scene Classification
-* **Deriving Indices:** NDVI
+* **Cloud Masking:** Sen2Cor Scene Classification
+* **Deriving Index:** NDVI
 * **Spatial Resolution:** 10-m
 * **Reprojection:** EPSG:23700 (Hungarian National Projection)
 * **Resampling:** Near
@@ -305,4 +305,149 @@ output-image-settings:
 │   │   ├── 3
 │   │   │   ├── S2A_MSIL1C_20191002T094031_N0208_R036_T34TCT_20191002T111505_ndvi_FEATURE_ID_3_clipped.tif
 │   S2A_MSIL1C_20191002T094031_N0208_R036_T34TCT_20191002T111505_ndvi.tif
+```
+
+### Example-4
+
+**ARD Operations performed in this example:**
+* **Cloud Masking:** Sen2Cor Scene Classification, FMASK
+* **Stacking Bands:** Band-02, Band-03, Band-04, Band-05, Band-06, Band-07, Band-08, Band-8A, Band-11, Band-12 
+* **Deriving Index:** NDVI
+* **Spatial Resolution:** 20-m
+* **Resampling:** Cubic
+
+1. In the previous examples the L1C Sentinel-2 Data Product was downloaded inside the docker container while this example and the next use an already downloaded data product. You can download data product from [ESA Copernicus SciHub](https://scihub.copernicus.eu/dhus/#/home) manually or using API interfaces such as [sentinelsat](https://github.com/sentinelsat/sentinelsat). 
+   
+   *The example below uses S2A_MSIL2A_20191028T235251_N0213_R130_T56JMM_20191029T015139.SAFE tile*.
+
+1. Open the Terminal app
+
+1. Unzip the downloaded data product
+   
+   ```
+   unzip S2A_MSIL2A_20191028T235251_N0213_R130_T56JMM_20191029T015139.zip
+   ```
+   
+1. In your Terminal window, navigate to the directory where **s2-ard.sh** is saved.
+   
+      *For example, if you saved the script to your Downloads directory, type:*
+      ```
+      cd ~/Downloads
+      ```
+
+1. Create a new configuration YAML file (new_config.yml) with the following content. (The name of the configuration file can be anything.)
+
+``` yaml
+# defining the ard operations
+ard-settings:
+  "atm-corr" : false
+  "cloud-mask" : true
+  "stack" : true
+  "calibrate" : false
+  "clip" : false
+  "derived-index" : true
+
+# pixel values in mask to keep (clear pixels)   
+cloud-mask-settings:
+  "sen2cor-scl-codes" : [4, 5]
+  "fmask-codes" : [1]
+
+output-image-settings:
+  # bands to stack 
+  "bands" : ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
+  # derived indices to calculate
+  "vi" : ["ndvi"] 
+  # target spatial reference system - epsg code i. e. 3857
+  "t-srs" : False
+  # output image resolution
+  "resolution" : 20
+  # method for resampling bands when resolution changes or reprojection  
+  "resampling-method" : "cubic"
+```
+
+1. Execute **s2-ard.sh** with the tile name
+   ```
+   sh s2-ard.sh --tile /path/to/S2A_MSIL2A_20191028T235251_N0213_R130_T56JMM_20191029T015139.SAFE --config new_config.yml
+   ```
+   Processing can take up about a few minutes this case depending on the internet connection, and computer resources.
+
+1. Upon completion, ARD products will appear in the directory where **s2-ard.sh** was executed under a new folder called **output**.
+
+``` bash
+├── output
+│   S2A_MSIL2A_20191028T235251_N0213_R130_T56JMM_20191029T015139_stacked.tif
+│   S2A_MSIL2A_20191028T235251_N0213_R130_T56JMM_20191029T015139_ndvi.tif
+```
+
+### Example-5
+
+**ARD Operations performed in this example:**
+* **Atmospheric Correction:** ESA Sen2Cor
+* **Cloud Masking:** Sen2Cor Scene Classification, FMASK
+* **Stacking Bands:** Band-02, Band-03, Band-04, Band-05, Band-06, Band-07, Band-08, Band-8A, Band-11, Band-12 
+* **Deriving Index:** NDVI
+* **Spatial Resolution:** 20-m
+* **Resampling:** Cubic
+
+1. In the previous examples the L1C Sentinel-2 Data Product was downloaded inside the docker container while this example and the next use an already downloaded data product. You can download data product from [ESA Copernicus SciHub](https://scihub.copernicus.eu/dhus/#/home) manually or using API interfaces such as [sentinelsat](https://github.com/sentinelsat/sentinelsat). 
+   
+   *The example below uses S2A_MSIL1C_20191028T235251_N0208_R130_T56JMM_20191029T011422.SAFE tile*.
+
+1. Open the Terminal app
+
+1. Unzip the downloaded data product
+   
+   ```
+   unzip S2A_MSIL1C_20191028T235251_N0208_R130_T56JMM_20191029T011422.zip
+   ```
+   
+1. In your Terminal window, navigate to the directory where **s2-ard.sh** is saved.
+   
+      *For example, if you saved the script to your Downloads directory, type:*
+      ```
+      cd ~/Downloads
+      ```
+
+1. Create a new configuration YAML file (new_config.yml) with the following content. (The name of the configuration file can be anything.)
+
+``` yaml
+# defining the ard operations
+ard-settings:
+  "atm-corr" : true
+  "cloud-mask" : true
+  "stack" : true
+  "calibrate" : false
+  "clip" : false
+  "derived-index" : true
+
+# pixel values in mask to keep (clear pixels)   
+cloud-mask-settings:
+  "sen2cor-scl-codes" : [4, 5]
+  "fmask-codes" : [1]
+
+output-image-settings:
+  # bands to stack 
+  "bands" : ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
+  # derived indices to calculate
+  "vi" : ["ndvi"] 
+  # target spatial reference system - epsg code i. e. 3857
+  "t-srs" : False
+  # output image resolution
+  "resolution" : 20
+  # method for resampling bands when resolution changes or reprojection  
+  "resampling-method" : "cubic"
+```
+
+1. Execute **s2-ard.sh** with the tile name
+   ```
+   sh s2-ard.sh --tile /path/to/S2A_MSIL1C_20191028T235251_N0208_R130_T56JMM_20191029T011422.SAFE --config new_config.yml
+   ```
+   Processing can take up about a few minutes this case depending on the internet connection, and computer resources.
+
+1. Upon completion, ARD products will appear in the directory where **s2-ard.sh** was executed under a new folder called **output**.
+
+``` bash
+├── output
+│   S2A_MSIL2A_20191028T235251_N0213_R130_T56JMM_20191029T015139_stacked.tif
+│   S2A_MSIL2A_20191028T235251_N0213_R130_T56JMM_20191029T015139_ndvi.tif
 ```

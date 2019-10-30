@@ -2,7 +2,9 @@
 
 # docker pull s2-ard / docker build -t s2-ard .
 
-docker run --name s2-ard -dit s2-ard
+# docker run --name s2-ard -dit s2-ard
+
+docker pull regennetwork/regen-s2-ard
 
 # parse named argument options
 while :; do

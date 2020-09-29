@@ -21,23 +21,11 @@ ENV PATH=/miniconda/bin:${PATH}
 #RUN conda update -y conda
 
 # CONDA INSTALL PACKAGES
-RUN conda install -c conda-forge gdal=2.4.2
+RUN conda install -c conda-forge gdal
 RUN conda install -c conda-forge python-fmask
 RUN conda install -c conda-forge ruamel.yaml=0.15.96
-#RUN conda install -c conda-forge pyproj=1.9.5.1 
-
-# INSTALL GSUTIL
-# Downloading gcloud package
-RUN curl https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz > /usr/local/etc/google-cloud-sdk.tar.gz
-# Installing the package
-RUN mkdir -p /usr/local/gcloud && \
-    tar -C /usr/local/gcloud -xvf /usr/local/etc/google-cloud-sdk.tar.gz && \
-    /usr/local/gcloud/google-cloud-sdk/install.sh
-# Adding the package path to local
-ENV PATH $PATH:/usr/local/gcloud/google-cloud-sdk/bin
+RUN conda install -c conda-forge rasterio
 
 ENV HOME=/app
 WORKDIR $HOME
 COPY src $HOME
-
-#ENTRYPOINT ["python", "ard.py"]

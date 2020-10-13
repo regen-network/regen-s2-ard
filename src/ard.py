@@ -2,86 +2,23 @@
 import os
 import subprocess
 from argparse import ArgumentParser
-from pprint import pprint
 import xml.etree.ElementTree as ET
 from osgeo import gdal
 from osgeo import ogr
 import numpy as np
 import osr
-import json
 import glob
 from shutil import copyfile, copytree
-from ruamel_yaml import YAML
 import config_reader as cfg
 import rasterio as rio
 
+
 def system_call(params):
-    fprint(" ".join(params))
+    print(" ".join(params))
     return_code = subprocess.call(params)
     if return_code:
-        fprint(return_code)
+        print(return_code)
 
-def fprint(str):
-    print('\t', str)
-
-def average_images(image_dir, mosaic_dir, average_settings):
-
-    def build_command(tiles):
-        # create system command
-        system_command = ["gdal_calc.py"]
-
-        # flags for gdal_calc command
-        flags = [chr(x) for x in range(ord('A'), ord('Z')+1)]
-        flags = flags[:len(tiles)]
-
-        # append flags to command
-        for tile, flag in zip(tiles, flags):
-            system_command.append('-' + flag)
-            system_command.append(tile)
-
-        # make output file
-        tile_names = [tile.split('/')[-1] for tile in tiles]
-        image_dates = [tile[11:19] for tile in tile_names if tile.startswith('S')]
-        if average_settings['include-mosaic'] == True:
-            image_dates = image_dates + tile_names[-1].split('_')[:-2]
-
-        output_image = output_dir + os.sep + '_'.join(image_dates + ['average', extension])
-        system_command.append("--outfile=" + output_image)
-
-        # append calculation expression & choice flags
-        system_command.append("--calc=({})/{}".format(' + '.join(flags), np.float32(len(flags))))
-        system_command.append("--allBands={}".format(flags[0])) # average each band
-        system_command.append("--overwrite")
-        system_command.append("--quiet") # supress output messages
-
-        return system_command
-
-
-    # build image list
-    tile_list = [file for file in os.listdir(image_dir)
-                    if os.path.isfile(os.path.join(image_dir, file))
-                    and file.endswith('.tif')]
-
-    # filter tile list to include only images listed in config file
-    filter = [image[:60] for image in average_settings['average-list']]
-    tile_list = [os.path.join(image_dir, tile) for tile in tile_list
-                    if tile[:60] in filter]
-
-
-    # averages to generate based on extension (stacked, ndvi, etc...)
-    file_extensions = list(set(tile.split('_')[-1] for tile in tile_list))
-    # include images from mosaic folder
-    if average_settings['include-mosaic'] == True:
-        mosaic_list = [os.path.join(mosaic_dir, file) for file in os.listdir(mosaic_dir)
-                            if os.path.isfile(os.path.join(mosaic_dir, file))
-                            and 'mosaic' in file and file.endswith('tif')]
-        tile_list = tile_list + mosaic_list
-
-    # average images
-    for extension in file_extensions:
-        tiles = [tile for tile in tile_list if tile.endswith(extension)]
-        system_command = build_command(tiles)
-        system_call(system_command)
 
 # processing the tile
 class ProcessTile():
@@ -90,17 +27,17 @@ class ProcessTile():
 
         # read in configuration settings
         self.config = config_dict
-        fprint('IMAGE SETTINGS: {}'.format(self.config.ard_settings))
-        fprint('CLOUD MASK SETTINGS: {}'.format(self.config.cloud_mask_settings))
-        fprint('OUTPUT IMAGE SETTINGS: {}'.format(self.config.output_image_settings))
+        print('IMAGE SETTINGS: {}'.format(self.config.ard_settings))
+        print('CLOUD MASK SETTINGS: {}'.format(self.config.cloud_mask_settings))
+        print('OUTPUT IMAGE SETTINGS: {}'.format(self.config.output_image_settings))
 
         # output-image-settings
         self.bands = self.config.output_image_settings['bands']
         self.derived_indices = self.config.output_image_settings["vi"]
 
-        self.image_properties = {'resolution' : self.config.output_image_settings['resolution'],
-                                 't_srs' : self.config.output_image_settings['t-srs'],
-                                 'resampling_method' : self.config.output_image_settings['resampling-method']}
+        self.image_properties = {'resolution': self.config.output_image_settings['resolution'],
+                                 't_srs': self.config.output_image_settings['t-srs'],
+                                 'resampling_method': self.config.output_image_settings['resampling-method']}
 
         self.input_features = self.config.output_image_settings['input-features']
 
@@ -126,7 +63,7 @@ class ProcessTile():
 
         # ATMOSPHERIC CORRECTION - SEN2COR
         if self.config.ard_settings['atm-corr'] == True:
-            fprint('RUNNING ATMOSPHERIC CORRECTION - SEN2COR')
+            print('RUNNING ATMOSPHERIC CORRECTION - SEN2COR')
             system_command = ['L2A_Process', "--resolution", '10', input_tile]
             system_call(system_command)
 
@@ -143,43 +80,50 @@ class ProcessTile():
         # resampling to target resolution if bands/image does not meet target resolution
         for key in self.bands:
             if self.get_band_meta(ref_bands[key])['geotransform'][1] != self.image_properties['resolution']:
-                fprint('RESAMPLING BAND TO TARGET RESOLUTION: %s' % (key))
+                print('RESAMPLING BAND TO TARGET RESOLUTION: %s' % (key))
                 resampled_image = self.rename_image(work_dir, '.tif', os.path.split(os.path.splitext(input_tile)[0])[1], key)
                 ref_bands[key] = self.resample_image(ref_bands[key], resampled_image, self.image_properties)
 
         # DERIVING INDICES
         if self.config.ard_settings["derived-index"] == True:
-            fprint('DERIVE INDEX / INDICES')
+            print('DERIVE INDEX / INDICES')
             vi_band_dict = {
-                            'ndvi' : ['B08', 'B04'],
-                            'ndwi' : ['B08', 'B11'],
-                            'ndti' : ['B11', 'B12'],
-                            'crc'  : ['B11', 'B02']
+                            'ndvi': ['B08', 'B04'],
+                            'ndwi': ['B08', 'B11'],
+                            'ndti': ['B11', 'B12'],
+                            'crc': ['B11', 'B02'],
+                            'vdvi': ['B02', 'B03', 'B04'],
+                            'bsi': ['B02', 'B04', 'B08', 'B11']
                             }
 
             derived_bands = {}
             for index in self.derived_indices:
-                fprint((index, vi_band_dict[index]))
+                print((index, vi_band_dict[index]))
 
                 if self.config.ard_settings['atm-corr'] == False:
                     if producttype == 'L1C':
                         vi_bands = self._subset_toa_bands(vi_band_dict[index], all_bands)
-                        fprint(vi_bands)
+                        print(vi_bands)
 
                 if self.config.ard_settings['atm-corr'] == True or producttype == 'L2A':
                     vi_bands = self._subset_boa_bands(vi_band_dict[index], all_bands)
-                    fprint(vi_bands)
+                    print(vi_bands)
 
                 for key in vi_bands.keys():
                     if (self.get_band_meta(vi_bands[key])['geotransform'][1] != self.config.output_image_settings['resolution']):
-                        fprint('RESAMPLING BAND TO TARGET RESOLUTION: %s' % (key))
+                        print('RESAMPLING BAND TO TARGET RESOLUTION: %s' % (key))
                         resampled_image = self.rename_image(work_dir, '.tif', os.path.split(os.path.splitext(input_tile)[0])[1], key)
                         vi_bands[key] = self.resample_image(vi_bands[key], resampled_image, self.image_properties)
 
                 # write index
                 band_meta = self.get_band_meta(vi_bands[key])
                 band_meta['dtype'] = 6
-                derived_index = self.normalized_diff(vi_bands[vi_band_dict[index][0]], vi_bands[vi_band_dict[index][1]])
+                if index == 'vdvi':
+                    derived_index = self.calculate_vdvi(vi_bands[vi_band_dict[index][0]], vi_bands[vi_band_dict[index][1]], vi_bands[vi_band_dict[index][2]])
+                elif index == 'bsi':
+                    derived_index = self.calculate_bsi(vi_bands[vi_band_dict[index][0]], vi_bands[vi_band_dict[index][1]], vi_bands[vi_band_dict[index][2]], vi_bands[vi_band_dict[index][3]])
+                else:
+                    derived_index = self.normalized_diff(vi_bands[vi_band_dict[index][0]], vi_bands[vi_band_dict[index][1]])
                 derived_index_image = self.rename_image(work_dir, '.tif', os.path.splitext(os.path.split(input_tile)[1])[0], index)
 
                 self.write_image(derived_index_image, "GTiff", band_meta, [derived_index])
@@ -191,7 +135,7 @@ class ProcessTile():
 
             if (self.config.ard_settings['atm-corr'] == False) and (producttype == 'L1C'):
                 # running sen2cor scene classification only
-                fprint('RUNNING SEN2COR SCENE CLASSIFICATION ONLY')
+                print('RUNNING SEN2COR SCENE CLASSIFICATION ONLY')
                 system_command = ['L2A_Process', "--sc_only", input_tile]
                 system_call(system_command)
 
@@ -208,7 +152,7 @@ class ProcessTile():
             mask = self.binary_mask(self.read_band(scl_image), self.config.cloud_mask_settings['sen2cor-scl-codes'])
 
             # apply scl_image as mask to ref images
-            fprint('APPLYING SEN2COR SCENE CLASSIFICATION MASK TO REF BANDS')
+            print('APPLYING SEN2COR SCENE CLASSIFICATION MASK TO REF BANDS')
             for key in self.bands:
                 band_meta = self.get_band_meta(ref_bands[key])
                 masked_array = self.mask_array(mask, self.read_band(ref_bands[key]))
@@ -218,7 +162,7 @@ class ProcessTile():
                 ref_bands[key] = masked_image
 
             # apply scl_image as mask to index images
-            fprint('APPLYING SEN2COR SCENE CLASSIFICATION MASK TO INDICES')
+            print('APPLYING SEN2COR SCENE CLASSIFICATION MASK TO INDICES')
             if self.derived_indices != False:
                 for key in self.derived_indices:
                     band_meta = self.get_band_meta(derived_bands[key])
@@ -230,7 +174,7 @@ class ProcessTile():
 
         # FMASK CLOUD MASKING
         if (self.config.ard_settings['cloud-mask'] == True) and (self.config.cloud_mask_settings['fmask-codes']) and (producttype == 'L1C'):
-            fprint('RUNNING FMASK CLOUD MASK')
+            print('RUNNING FMASK CLOUD MASK')
             # running fmask cloud masking
             fmask_image = work_dir + os.sep + '_'.join([os.path.splitext(os.path.split(input_tile)[1])[0], 'FMASK']) + '.tif'
             system_command = ['fmask_sentinel2Stacked.py', '-o', fmask_image, '--safedir', input_tile]
@@ -248,7 +192,7 @@ class ProcessTile():
                 fmask_image = self.resample_image(fmask_image, 'resampled', _image_properties)
 
             # applying fmask as mask to ref images
-            fprint('APPLYING FMASK CLOUD MASK')
+            print('APPLYING FMASK CLOUD MASK')
             mask = self.binary_mask(self.read_band(fmask_image), self.config.cloud_mask_settings['fmask-codes'])
             for key in self.bands:
                 band_meta = self.get_band_meta(ref_bands[key])
@@ -258,7 +202,7 @@ class ProcessTile():
                 ref_bands[key] = masked_image
 
             # apply fmask as mask to index images
-            fprint('APPLYING FMASK CLOUD MASK TO INDICES')
+            print('APPLYING FMASK CLOUD MASK TO INDICES')
             if self.derived_indices != False:
                 for key in self.derived_indices:
                     band_meta = self.get_band_meta(derived_bands[key])
@@ -269,33 +213,33 @@ class ProcessTile():
 
         # CALIBRATION
         if self.config.ard_settings['calibrate'] == True:
-            fprint('CALIBRATING BANDS')
+            print('CALIBRATING BANDS')
             for key in self.bands:
-                fprint('CALIBRATING BAND %s' % (key))
+                print('CALIBRATING BAND %s' % (key))
                 ref_bands[key] = self.calibrate('.'.join([ref_bands[key]]))
 
         # REPROJECTION
         # ref images
         for key in ref_bands:
             if self.get_band_meta(ref_bands[key])['epsg'] != str(self.image_properties['t_srs']):
-                fprint('REPROJECTING BAND %s' % (key))
+                print('REPROJECTING BAND %s' % (key))
                 ref_bands[key] = self.warp_image(ref_bands[key], 'resampled', self.image_properties)
 
         # index images
         if self.config.ard_settings["derived-index"] == True:
             for key in derived_bands:
                 if self.get_band_meta(derived_bands[key])['epsg'] != str(self.image_properties['t_srs']):
-                    fprint('REPROJECTING BAND %s' % (key))
+                    print('REPROJECTING BAND %s' % (key))
                     derived_bands[key] = self.warp_image(derived_bands[key], 'resampled', self.image_properties)
 
         # STACKING
         # onyl ref images
         if self.config.ard_settings['stack'] == True:
-            fprint('STACKING BANDS')
+            print('STACKING BANDS')
             arrays = []
             if len(self.bands) > 1:
                 for key in self.bands:
-                    fprint('STACKING BAND %s' % (key))
+                    print('STACKING BAND %s' % (key))
                     band_meta = self.get_band_meta(ref_bands[key])
                     arrays.append(self.read_band(ref_bands[key]))
                 stacked_image = self.rename_image(work_dir, '.tif', os.path.splitext(os.path.split(input_tile)[1])[0], 'stacked')
@@ -336,7 +280,6 @@ class ProcessTile():
         product = root.findall('.//Product_Organisation/Granule_List/Granule')
         for res_dir in product:
             for band in res_dir.findall('IMAGE_FILE'):
-                #if band.text[-7:-4] in self.bands:
                 band_pathes[band.text[-7:]] = os.path.split(metadata_xml)[0] + os.sep + band.text + '.jp2'
         return(band_pathes)
 
@@ -346,7 +289,6 @@ class ProcessTile():
         product = root.findall('.//Product_Organisation/Granule_List/Granule')
         for res_dir in product:
             for band in res_dir.findall('IMAGE_FILE'):
-                #if band.text[-3:] in self.bands:
                 band_pathes[band.text[-3:]] = os.path.split(metadata_xml)[0] + os.sep + band.text + '.jp2'
         return(band_pathes)
 
@@ -371,7 +313,7 @@ class ProcessTile():
     def _get_raster_epsg(self, input_raster):
         src = gdal.Open(input_raster)
         proj = osr.SpatialReference(wkt=src.GetProjection())
-        return(proj.GetAttrValue('AUTHORITY',1))
+        return(proj.GetAttrValue('AUTHORITY', 1))
 
     def rename_image(self, basedir, extension, *argv):
         new_name = basedir + os.sep + "_".join(argv) + extension
@@ -379,14 +321,14 @@ class ProcessTile():
 
     # raster operations
     def resample_image(self, image, resampled_image, img_prop):
-        fprint('Resolution does not meet target_resolution, resampling %s' % (image))
+        print('Resolution does not meet target_resolution, resampling %s' % (image))
         system_command = ['gdal_translate', "-tr", str(img_prop['resolution']), str(img_prop['resolution']), '-r', str(img_prop['resampling_method']), image, resampled_image]
         system_call(system_command)
         return(resampled_image)
 
     def warp_image(self, image, suffix, img_prop):
         warped_image = work_dir + os.sep + '_'.join([os.path.splitext(os.path.basename(image))[0], suffix, str(img_prop['resolution']), img_prop['resampling_method'], str(img_prop['t_srs'])]) + '.tif'
-        system_command = ['gdalwarp', "-tr", str(img_prop['resolution']), str(img_prop['resolution']), '-t_srs', 'EPSG:' + str(img_prop['t_srs']),'-r', img_prop['resampling_method'], image, warped_image, '-overwrite']
+        system_command = ['gdalwarp', "-tr", str(img_prop['resolution']), str(img_prop['resolution']), '-t_srs', 'EPSG:' + str(img_prop['t_srs']), '-r', img_prop['resampling_method'], image, warped_image, '-overwrite']
         system_call(system_command)
         return(warped_image)
 
@@ -432,6 +374,15 @@ class ProcessTile():
         return(band_meta)
 
     def binary_mask(self, scl, pixel_values):
+        """ binary mask
+
+            Parameters
+            ----------
+            scl : numpy array
+                Land use land cover (LULC) array
+            pixel_values : list
+                list of values in scl to keep
+        """
         mask = np.zeros(scl.shape)
         for pixel_value in pixel_values:
             mask = np.ma.masked_where(scl == pixel_value, mask).filled(1)
@@ -441,11 +392,11 @@ class ProcessTile():
         return(np.ma.masked_where(mask == 0, array).filled(0))
 
     def normalized_diff(self, b1, b2):
-
-        np.seterr(divide='ignore', invalid='ignore')
+        """ Normalized Difference Index (NDVI, NWDI, etc...)
+                n_diff = (b1 - b2) / (b1 + b2)
+        """
 
         b1, b2 = self.read_band(b1) / float(10000), self.read_band(b2) / float(10000)
-
         if not (b1.shape == b2.shape):
             raise ValueError("Both arrays should have the same dimensions")
 
@@ -454,13 +405,7 @@ class ProcessTile():
             n_diff = (b1 - b2) / (b1 + b2).astype(np.float32)
 
         # Set inf values to nan and provide custom warning
-        if np.isinf(n_diff).any():
-            warnings.warn(
-                "Divide by zero produced infinity values that will be replaced "
-                "with nan values",
-                Warning,
-            )
-            n_diff[np.isinf(n_diff)] = np.nan
+        n_diff[np.isinf(n_diff)] = np.nan
 
         # Mask invalid values
         if np.isnan(n_diff).any():
@@ -468,8 +413,37 @@ class ProcessTile():
 
         return n_diff
 
+    def calculate_vdvi(self, blue, green, red):
+        """ Visible Difference Vegetation Index (Wang et al 2005)
+                VDVI = ((2 * Green) - Red - Blue) / ((2 * Green) + Red + Blue)
+        """
+        b2, b3, b4 = self.read_band(blue), self.read_band(green), self.read_band(red)
+
+        with np.errstate(divide="ignore"):
+            vdvi = ((2*b3) - b4 - b2) / ((2*b3) + b4 + b2)
+            # mask out invalid values
+            vdvi[np.isinf(vdvi)] = np.nan
+            if np.isnan(vdvi).any():
+                vdvi = np.ma.masked_invalid(vdvi)
+
+        return vdvi
+
+    def calculate_bare_soil(self, blue, red, nir, swir):
+        """ Bare Soil Index:
+                BSI = ((SWIR - Red) - (NIR + Blue)) / ((SWIR - Red) + (NIR + Blue))
+        """
+        b2, b4, b8, b11 = self.read_band(blue), self.read_band(red), self.read_band(nir), self.read_band(swir)
+        with np.errstate(divide="ignore"):
+            bsi = ((b11 - b4) - (b8 + b2)) / ((b11 - b4) + (b8 + b2))
+        # mask out invalid values
+        bsi[np.isinf(bsi)] = np.nan
+        if np.isnan(bsi).any():
+            bsi = np.ma.masked_invalid(bsi)
+
+        return bsi
+
     def write_image(self, out_name, driver, band_meta, arrays):
-        fprint('WRITING IMAGE: ' + out_name)
+        print('WRITING IMAGE: ' + out_name)
         driver = gdal.GetDriverByName(driver)
         dataset_out = driver.Create(out_name, band_meta["X"], band_meta["Y"], len(arrays), band_meta["dtype"])
         dataset_out.SetGeoTransform(band_meta["geotransform"])
@@ -501,7 +475,7 @@ class ProcessTile():
             # create a list of images to mosaic
             to_mosaic = [tile for tile in tile_list if tile.endswith(extension)]
             # order the list of images to mosaic (last image in is the image on top)
-            mosaic_bands = [x for _,x in sorted(zip(mosaic_settings['image-list'], to_mosaic))]
+            mosaic_bands = [x for _, x in sorted(zip(mosaic_settings['image-list'], to_mosaic))]
             # build mosaic
             mosaic_vrt = output_dir + os.sep + '_'.join(image_dates + ['mosaic', extension[:-4]]) + '.vrt'
             system_command = ['gdalbuildvrt', mosaic_vrt, '-r', mosaic_settings['resampling-method']] + mosaic_bands
@@ -516,11 +490,11 @@ class ProcessTile():
             if file.endswith('.vrt'):
                 try:
                     os.remove(output_dir + os.sep + file)
-                except:
+                except Exception:
                     print('unable to remove: ', file)
 
     def crop_to_cutline(self, image_dir, input_features):
-        fprint('CROPPING TO CUTLINE')
+        print('CROPPING TO CUTLINE')
 
         # generate image list & get src epsg
         image_list = glob.glob(os.path.join(image_dir, '*.tif'))
@@ -528,7 +502,7 @@ class ProcessTile():
         features_epsg = self.get_vector_epsg(input_features)
         # reprojecting input_features to target_srs if not common projection
         if features_epsg != t_srs:
-            fprint('REPROJECTING INPUT FEATURES TO TARGET PROJECTION')
+            print('REPROJECTING INPUT FEATURES TO TARGET PROJECTION')
             t_srs_feature_aoi = work_dir + os.sep + "_".join([os.path.splitext(os.path.split(input_features)[1])[0], t_srs]) + '.geojson'
             system_command = ['ogr2ogr', "-overwrite", "-t_srs", 'EPSG:' + t_srs, t_srs_feature_aoi, input_features]
             system_call(system_command)
@@ -593,7 +567,7 @@ class ProcessTile():
             array_list = [self.read_image(x) for x in tiles]
             try:
                 with np.errstate(all='raise'):
-                    array_mean = np.nanmean(array_list,axis=0)
+                    array_mean = np.nanmean(array_list, axis=0)
             except:
                 print('failed')
             # performing average

@@ -1,6 +1,7 @@
 from ruamel_yaml import YAML
 import os
 
+
 # reading the configuration file
 class ConfigReader(object):
 
@@ -80,17 +81,19 @@ class ImageReader(object):
             except Exception:
                 raise IOError('in YAML file cloud-mask-settings is not defined for: ', self.tile_name)
 
-        if self.ard_settings['cloud-mask'] == False:
+        else:
             self.cloud_mask_settings = False
 
         # validate output-image-settings
         try:
             self.output_image_keywords = ["bands", "vi", "resampling-method", "t-srs", "resolution"]
-            self.output_image_settings = self.parse_settings(self.output_image_keywords, config['output-image-settings'])
+            self.output_image_settings = self.parse_settings(
+                self.output_image_keywords, config['output-image-settings'])
 
             # default keywords settings
             if 'bands' == False:
-                self.output_image_settings['bands'] = ['B02', 'B03', 'B04', 'B08']  # BLUE-GREEN-RED-NIR Band Combinations
+                self.output_image_settings['bands'] = ['B02', 'B03',
+                                                       'B04', 'B08']  # BLUE-GREEN-RED-NIR Band Combinations
             if 'resolution' == False:
                 self.output_image_settings['resolution'] = 10
             if 'resampling-method' == False:

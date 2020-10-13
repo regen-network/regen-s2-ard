@@ -92,8 +92,7 @@ class ImageReader(object):
 
             # default keywords settings
             if 'bands' == False:
-                self.output_image_settings['bands'] = ['B02', 'B03',
-                                                       'B04', 'B08']  # BLUE-GREEN-RED-NIR Band Combinations
+                self.output_image_settings['bands'] = ['B02', 'B03', 'B04', 'B08']  # BLUE-GREEN-RED-NIR Band Combinations
             if 'resolution' == False:
                 self.output_image_settings['resolution'] = 10
             if 'resampling-method' == False:

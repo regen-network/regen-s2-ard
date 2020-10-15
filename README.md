@@ -16,13 +16,12 @@ This ARD toolbox draws inspiration from and It complements to the [Alaskan Satel
 
 | ARD Operation          | Description   |
 |:---------------------- |:-------------|
-| **Downloading** | Fetching Sentinel-2 Top-of-Atmosphete L1C Data Product from [Google Cloud Storage](https://cloud.google.com/storage/docs/public-datasets/sentinel-2). |
 | **Atmospheric Correction** | Running ESA Sen2Cor |
-| **Band Subsetting** | Reflectence Bands can be subsetted creating composites |
+| **Band Subsetting** | Reflectence Bands can be subsetted to create composites |
 | **Cloud Masking** | Applying ESA Sen2Cor Scene Classification and/or FMask |
-| **Cut-to-AOI** | Batch Cutting the S2 Tile to the input Area-of-Interest Polygon or Polygons producing Image Chips |
-| **Stacking** | Reflectance Bands can be merged into a single GTiff file |
-| **Deriving Indices** | NDVI, NDWI, CRC, NDTI |
+| **Cut-to-AOI** | Batch cutting of S2 tiles to an input Area-of-Interest polygon or polygons to produce image chips |
+| **Stacking** | Reflectance bands can be merged into a single GTiff file |
+| **Deriving Indices** | NDVI, NDWI, CRC, NDTI, VDVI, BSI |
 | **Mosaicing** | Mosaic two or more S2 Tiles into a single GTiff file |
 | **Averaging** | Average two or more S2 Tiles into a single GTiff file |
 
@@ -39,90 +38,91 @@ This ARD toolbox draws inspiration from and It complements to the [Alaskan Satel
 ```
 sh s2-ard.sh --tiles DATA_DIR --config CONFIG [--aoi AOI]
 ```
-### Configuration
+### Configuration File
 ``` yaml
 # list of tiles to process
 tile-list:
-    tile-1:
-      # name of the tile
-      "tile-name" : "S2B_MSIL2A_20190506T235259_N0212_R130_T56JMM_20190522T085952.SAFE"
+  tile-1:
+    # name of the tile
+    "tile-name" : "S2A_MSIL2A_20190521T235251_N0212_R130_T56JMM_20190522T014028.SAFE"
 
-      # defining the ard operations
-      ard-settings:
-        "atm-corr" : false
-        "cloud-mask" : false
-        "stack" : true
-        "calibrate" : false
-        "clip" : false
-        "derived-index" : true
+    # defining the ard operations
+    ard-settings:
+      "atm-corr" : false
+      "cloud-mask" : false
+      "stack" : true
+      "calibrate" : false
+      "clip" : true
+      "derived-index" : true
 
-      # pixel values to keep (aka. clear pixels)
-      cloud-mask-settings:
-        #"sen2cor-scl-codes" : [4, 5]
-        #"fmask-codes" : [1]
+    # pixel values in mask to keep (clear pixels)
+    cloud-mask-settings:
+      #"sen2cor-scl-codes" : [4, 5, 6, 7]
+      #"fmask-codes" : [1]
 
-      output-image-settings:
-        # bands to stack
-        "bands" : ["B11", "B08", "B04", "B03", "B02"]
-        # derived indices to calculate
-        "vi" : ["ndvi"]
-        # target spatial reference system - epsg code i.e. 3857
-        "t-srs" : False
-        # output image resolution
-        "resolution" : 10
-        # method for resampling bands when resolution changes or reprojection
-        "resampling-method" : "cubic"
+    output-image-settings:
+      # bands to stack
+      "bands" : ["B02", "B03", "B04", "B05", "B06", "B08", "B11", "B12"]
+      # derived indices to calculate
+      "vi" : ["ndvi", "vdvi", "bsi"]
+      # target spatial reference system - epsg code i. e. 3857
+      "t-srs" : False
+      # output image resolution
+      "resolution" : 10
+      # method for resampling bands when resolution changes or reprojection
+      "resampling-method" : "cubic"
 
-    tile-2:
-        # name of the tile
-        "tile-name" : "S2A_MSIL2A_20190521T235251_N0212_R130_T56JMM_20190522T014028.SAFE"
+  tile-2:
+    # name of the tile
+    "tile-name" : "S2B_MSIL2A_20190506T235259_N0212_R130_T56JMM_20190522T085952.SAFE"
 
-        # defining the ard operations
-        ard-settings:
-          "atm-corr" : false
-          "cloud-mask" : false
-          "stack" : true
-          "calibrate" : false
-          "clip" : false
-          "derived-index" : true
+    # defining the ard operations
+    ard-settings:
+      "atm-corr" : false
+      "cloud-mask" : true
+      "stack" : true
+      "calibrate" : false
+      "clip" : true
+      "derived-index" : true
 
-        # pixel values in mask to keep (clear pixels)
-        cloud-mask-settings:
-          #"sen2cor-scl-codes" : [4, 5, 6, 7]
-          #"fmask-codes" : [1]
+    # pixel values in mask to keep (clear pixels)
+    cloud-mask-settings:
+      "sen2cor-scl-codes" : [4, 5, 6, 7]
+      #"fmask-codes" : [1]
 
-        output-image-settings:
-          # bands to stack
-          "bands" : ["B11", "B08", "B04", "B03", "B02"]
-          # derived indices to calculate
-          "vi" : ["ndvi"]
-          # target spatial reference system - epsg code i. e. 3857
-          "t-srs" : False
-          # output image resolution
-          "resolution" : 10
-          # method for resampling bands when resolution changes or reprojection
-          "resampling-method" : "cubic"
+    output-image-settings:
+      # bands to stack
+      "bands" : ["B02", "B03", "B04", "B05", "B06", "B08", "B11", "B12"]
+      # derived indices to calculate
+      "vi" : ["ndvi", "vdvi", "bsi"]
+      # target spatial reference system - epsg code i. e. 3857
+      "t-srs" : False
+      # output image resolution
+      "resolution" : 10
+      # method for resampling bands when resolution changes or reprojection
+      "resampling-method" : "cubic"
 
 # mosaic settings
 mosaic-settings:
-    # build mosaic
-    "build-mosaic" : false
-    # method for resampling bands during a mosaic (default is nearest)
-    "resampling-method" : "nearest"
-    # ordered list of images to mosaic - images are stacked w/last image on top
-    image-list:
-        1: ~
+  # build mosaic
+  "build-mosaic" : false
+  # method for resampling bands during a mosaic (default is nearest)
+  "resampling-method" : "nearest"
+  # ordered list of images to mosaic - images are stacked w/last image on top
+  image-list:
+    1: ~
 
 # image average settings
 average-settings:
-    # average images
-    "compute-average" : true
-    # include mosaic in average
-    "include-mosaic" : false
-    # images to include in average
-    image-list:
-        1: "S2B_MSIL2A_20190506T235259_N0212_R130_T56JMM_20190522T085952.SAFE"
-        2: "S2A_MSIL2A_20190521T235251_N0212_R130_T56JMM_20190522T014028.SAFE"
+  # average images
+  "compute-average" : true
+  # clip to aoi
+  "clip" : true
+  # images to include in average
+  image-list:
+    1: "S2A_MSIL2A_20190521T235251_N0212_R130_T56JMM_20190522T014028.SAFE"
+    2: "S2B_MSIL2A_20190506T235259_N0212_R130_T56JMM_20190522T085952.SAFE"
+
 ```
 * There are three main sections in the YAML file:
   - **tile-list**
@@ -134,7 +134,7 @@ average-settings:
       * FMask Codes: http://www.pythonfmask.org/en/latest/fmask_fmask.html
       * S2 SCL Codes: https://earth.esa.int/web/sentinel/technical-guides/sentinel-2-msi/level-2a/algorithm
     - **output-image-settings**
-    In this section we can define the bands we want to subset from the L1C or L2A input data product and set the output image settings such as target spatial reference system, target resolution, resampling method, derived indices. Currently 4 different derived indices can be calculated : NDVI, NDWI, NDTI and CRC.
+    In this section we can define the bands we want to subset from the L1C or L2A input data product and set the output image settings such as target spatial reference system, target resolution, resampling method, derived indices. Currently 6 different derived indices can be calculated : NDVI, NDWI, NDTI, CRC, VDVI and BSI.
   - **mosaic-settings**
   List of images to include in the mosaic, GDAL buildvrt mosaic setting options.
   - **average-settings**
@@ -265,18 +265,15 @@ mosaic-settings:
   # method for resampling bands during a mosaic (default is nearest)
   "resampling-method" : "nearest"
   # crop to aoi
-  "clip" : true
+  "clip" : false
   # ordered list of images to mosaic - images are stacked w/last image on top
   image-list:
-    1: "S2B_MSIL2A_20190506T235259_N0212_R130_T56JMM_20190522T085952.SAFE"
-    2: "S2A_MSIL2A_20190521T235251_N0212_R130_T56JMM_20190522T014028.SAFE"
+    1: ~
 
 # image average settings
 average-settings:
   # average images
   "compute-average" : true
-  # include mosaic in average
-  "include-mosaic" : false
   # clip to aoi
   "clip" : true
   # images to include in average

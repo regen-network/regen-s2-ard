@@ -12,11 +12,11 @@ class ConfigReader(object):
             config = yaml.load(stream)
 
         # error handling happens in image reader
-        self.tile_list = []
+        self.image_list = []
         for tile_args in config['tile-list']:
             tile_config = config['tile-list'][tile_args]
             tile_settings = ImageReader(tile_config, geojson_file)
-            self.tile_list.append(tile_settings)
+            self.image_list.append(tile_settings)
 
         # parse mosaic settings
         if config['mosaic-settings']['build-mosaic'] == True:
@@ -30,7 +30,8 @@ class ConfigReader(object):
             except Exception:
                 raise IOError('in YAML file mosaic-settings not defined')
         else:
-            self.mosaic_settings = False
+            self.mosaic_settings = {}
+            self.mosaic_settings['build-mosaic'] = False
 
         # parse average settings
         if config['average-settings']['compute-average'] is True:
@@ -45,7 +46,8 @@ class ConfigReader(object):
                 raise IOError('in YAML file average-settings not defined')
 
         else:
-            self.average_settings = False
+            self.average_settings = {}
+            self.average_settings['compute-average'] = False
 
     def parse_settings(self, keywords, config):
         param_dict = {}

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-
-# Python modules
 import os
 import subprocess
 import numpy as np
+np.seterr(divide='ignore', invalid='ignore')
 from osgeo import gdal
 from osgeo import ogr
 import osr
 import glob
+import shutil
 
 
 def system_call(params):
@@ -16,85 +16,70 @@ def system_call(params):
     if return_code:
         print(return_code)
 
+
 # raster operations
-def compute_average(self, image_dir, output_dir, average_settings):
+def crop_to_cutline(image_dir, input_features):
+    """ Crops directory of rasters to shapefile
 
-    # list of images to mosaic
-    tile_list = []
-    for image in average_settings['image-list']:
-        tile_path = os.path.join(image_dir, image[:-5])
-        for file in os.listdir(tile_path):
-            if os.path.isfile(os.path.join(tile_path, file)) and file.endswith('.tif'):
-                tile_list.append(os.path.join(tile_path, file))
+        Parameters
+        ----------
+        image_dir : str
+            path to directory containing input rasters
+        input_features : str
+            full path to input feature (shapefile / geojson / geopackage)
+    """
 
-    # averages to generate based on extension (stacked, ndvi, etc...)
-    file_extensions = list(set(tile.split('_')[-1] for tile in tile_list))
-
-    # sensing date of images
-    image_dates = [tile.split('/')[-1][11:19] for tile in average_settings['image-list']]
-
-    output_dir = "/output/average"
-
-    for extension in file_extensions:
-        # build image list from extension
-        tiles = [tile for tile in tile_list if tile.endswith(extension)]
-        # read in images
-        array_list = [self.read_image(x) for x in tiles]
-        try:
-            with np.errstate(all='raise'):
-                array_mean = np.nanmean(array_list, axis=0)
-        except:
-            print('failed')
-        # performing average
-        print('performing average')
-        #array_out = np.squeeze(array_out)
-        # create output image
-        output_image = output_dir + os.sep + '_'.join(image_dates + ['average', extension])
-        # write image
-        with rio.open(tiles[0]) as src:
-            meta = src.meta
-        meta['driver'] = 'GTiff'
-        meta['dtype'] = 'float32'
-        with rio.open(output_image, 'w', **meta) as dst:
-            dst.write(array_mean.astype(rio.float32))
-
-def build_mosaic(image_dir, mosaic_settings):
-    # list of images to mosaic
-    tile_list = []
-    for image in mosaic_settings['image-list']:
-        tile_path = os.path.join(image_dir, image[:-5])
-        for file in os.listdir(tile_path):
-            if os.path.isfile(os.path.join(tile_path, file)) and file.endswith('.tif'):
-                tile_list.append(os.path.join(tile_path, file))
-
-    # mosaics to build based on extension (stacked, ndvi, etc...)
-    file_extensions = list(set(tile.split('_')[-1] for tile in tile_list))
-    # sensing date of images
-    image_dates = [tile[11:19] for tile in mosaic_settings['image-list']]
-    # output directory
-    output_dir = "/output/mosaic"
-
-    for extension in file_extensions:
-        # create a list of images to mosaic
-        to_mosaic = [tile for tile in tile_list if tile.endswith(extension)]
-        # order the list of images to mosaic (last image in is the image on top)
-        mosaic_bands = [x for _, x in sorted(zip(mosaic_settings['image-list'], to_mosaic))]
-        # build mosaic
-        mosaic_vrt = output_dir + os.sep + '_'.join(image_dates + ['mosaic', extension[:-4]]) + '.vrt'
-        system_command = ['gdalbuildvrt', mosaic_vrt, '-r', mosaic_settings['resampling-method']] + mosaic_bands
+    print('CROPPING TO CUTLINE')
+    # generate image list & get src epsg
+    image_list = glob.glob(os.path.join(image_dir, '*.tif'))
+    t_srs = get_raster_epsg(image_list[0])
+    features_epsg = get_vector_epsg(input_features)
+    # reprojecting input_features to target_srs if not common projection
+    if features_epsg != t_srs:
+        print('REPROJECTING INPUT FEATURES TO TARGET PROJECTION')
+        t_srs_feature_aoi = image_dir + os.sep + "_".join([os.path.splitext(os.path.split(input_features)[1])[0], t_srs]) + '.geojson'
+        system_command = ['ogr2ogr', "-overwrite", "-t_srs", 'EPSG:' + t_srs, t_srs_feature_aoi, input_features]
         system_call(system_command)
-        # convert mosaic to geotiff
-        output_image = mosaic_vrt[:-4] + '.tif'
-        system_command = ["gdal_translate", "-of", "GTiff", mosaic_vrt, output_image]
-        system_call(system_command)
+        input_features = t_srs_feature_aoi
+
+    src = ogr.Open(input_features, 0)
+    layer = src.GetLayer()
+    count = layer.GetFeatureCount()
+    for feature in layer:
+        feature_id = feature.GetFID()
+        feature_shp = image_dir + os.sep + '_'.join([os.path.splitext(os.path.split(input_features)[1])[0], 'FEATURE_ID', str(feature_id)])
+        if not os.path.exists(feature_shp):
+            ftr_drv = ogr.GetDriverByName('Esri Shapefile')
+            out_feature = ftr_drv.CreateDataSource(feature_shp)
+            lyr = out_feature.CreateLayer('poly', layer.GetSpatialRef(), ogr.wkbPolygon)
+            feat = lyr.CreateFeature(feature.Clone())
+            out_feature = None
+
+        # cropping reflectance band image chips
+        for image in image_list:
+            subdir = image_dir + os.sep + 'clipped'
+            if not os.path.exists(subdir):
+                os.mkdir(subdir)
+            if count == 1:
+                image_chip = subdir + os.sep + '_'.join([os.path.split(os.path.splitext(image)[0])[1], 'clipped']) + '.tif'
+            if count > 1:
+                image_chip = subdir + os.sep + '_'.join([os.path.split(os.path.splitext(image)[0])[1], 'FEATURE_ID', str(feature_id), 'clipped']) + '.tif'
+            # cropping to cutline bands
+            crop_image(image, image_chip, feature_shp)
+    src = None
 
     # cleanup
-    for file in os.listdir(output_dir):
-        if file.endswith('.vrt'):
+    for file in os.listdir(image_dir):
+        if file.endswith('.geojson'):
             try:
-                os.remove(output_dir + os.sep + file)
+                shutil.rmtree(image_dir + os.sep + file)
             except Exception:
-                print('unable to remove: ', file)
+                print('unable to remove: ', image_dir + os.sep + file)
+
+
+def crop_image(input_image, output_image, feature_shp):
+    system_command = ['gdalwarp', "-cutline", feature_shp, '-crop_to_cutline', input_image, output_image, '-overwrite']
+    system_call(system_command)
 
 
 def get_raster_epsg(input_raster):
@@ -119,9 +104,9 @@ def get_band_meta(img_file):
     return(band_meta)
 
 
-def read_band(band_path):
+def read_band(band_path, band_num=1):
     src = gdal.Open(band_path)
-    return(src.GetRasterBand(1).ReadAsArray())
+    return(src.GetRasterBand(band_num).ReadAsArray())
 
 
 def resample_image(image, resampled_image, img_prop):
@@ -260,7 +245,7 @@ def normalized_diff(b1, b2):
     return n_diff
 
 
-def vdvi(self, blue, green, red):
+def vdvi(blue, green, red):
     """ Visible Difference Vegetation Index (Wang et al 2005)
 
         Equation:
@@ -276,11 +261,11 @@ def vdvi(self, blue, green, red):
         numpy array
             vdvi
     """
-    b1, b2, b3 = self.read_band(blue), self.read_band(green), self.read_band(red)
+    b1, b2, b3 = read_band(blue), read_band(green), read_band(red)
 
     # ignore warning for division by zero
     with np.errstate(divide="ignore"):
-        vdvi = ((2*b2) - b3 - b1) / ((2*b2) + b3 + b1)
+        vdvi = ((2*b2) - b3 - b1) / ((2*b2) + b3 + b1).astype(np.float32)
         # mask out invalid values
         vdvi[np.isinf(vdvi)] = np.nan
         if np.isnan(vdvi).any():
@@ -307,7 +292,7 @@ def bare_soil(blue, red, nir, swir):
     """
     b2, b4, b8, b11 = read_band(blue), read_band(red), read_band(nir), read_band(swir)
     with np.errstate(divide="ignore"):
-        bsi = ((b11 - b4) - (b8 + b2)) / ((b11 - b4) + (b8 + b2))
+        bsi = ((b11 - b4) - (b8 + b2)) / ((b11 - b4) + (b8 + b2)).astype(np.float32)
     # mask out invalid values
     bsi[np.isinf(bsi)] = np.nan
     if np.isnan(bsi).any():

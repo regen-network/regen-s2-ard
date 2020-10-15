@@ -1,23 +1,109 @@
 #!/usr/bin/env python3
 import os
-import subprocess
 from argparse import ArgumentParser
 import xml.etree.ElementTree as ET
 from osgeo import gdal
-from osgeo import ogr
 import numpy as np
-import osr
-import glob
-from shutil import copyfile, copytree
+from shutil import copyfile
 import config_reader as cfg
 import raster_mod as rm
+from raster_mod import system_call
 
 
-def system_call(params):
-    print(" ".join(params))
-    return_code = subprocess.call(params)
-    if return_code:
-        print(return_code)
+def build_mosaic(input_dir, image_list, output_dir, resampling_method='cubic'):
+    """ Builds mosaic of two or more sentinel-2 tiles
+
+        Parameters
+        ----------
+        input_dir : str
+            Directory path containing two or more Sentinel-2 tile directories
+        image_list : list
+            List of tiles to include in mosaic
+        output_dir : str
+            Path to output directory
+        resampling_method : str
+            resampling method (listed in https://gdal.org/programs/gdalwarp.html)
+    """
+    # list of images to mosaic - bit hacky, can improve
+    tile_list = []
+    for image in image_list:
+        tile_path = os.path.join(input_dir, image[:-5])
+        for file in os.listdir(tile_path):
+            if os.path.isfile(os.path.join(tile_path, file)) and file.endswith('.tif'):
+                tile_list.append(os.path.join(tile_path, file))
+
+    # mosaics to build based on extension (stacked, ndvi, etc...)
+    file_extensions = list(set(tile.split('_')[-1] for tile in tile_list))
+    # sensing date of images
+    image_dates = [tile[11:19] for tile in image_list]
+
+    for extension in file_extensions:
+        # create a list of images to mosaic
+        to_mosaic = [tile for tile in tile_list if tile.endswith(extension)]
+        # order the list of images to mosaic (last image in is the image on top)
+        mosaic_bands = [x for _, x in sorted(zip(image_list, to_mosaic))]
+        # build mosaic
+        mosaic_vrt = output_dir + os.sep + '_'.join(image_dates + ['mosaic', extension[:-4]]) + '.vrt'
+        system_command = ['gdalbuildvrt', mosaic_vrt, '-r', resampling_method] + mosaic_bands
+        system_call(system_command)
+        # convert mosaic to geotiff
+        output_image = mosaic_vrt[:-4] + '.tif'
+        system_command = ["gdal_translate", "-of", "GTiff", mosaic_vrt, output_image]
+        system_call(system_command)
+
+    # cleanup
+    for file in os.listdir(output_dir):
+        if file.endswith('.vrt'):
+            try:
+                os.remove(output_dir + os.sep + file)
+            except Exception:
+                print('unable to remove: ', file)
+
+
+def compute_average(input_dir, image_list, output_dir):
+    """ Computes average for series of already processed sentinel-2 tiles
+
+        Parameters
+        ----------
+        input_dir : str
+            Directory path containing two or more Sentinel-2 tile directories
+        image_list : list
+            List of tiles to include in average
+        output_dir : str
+            Path to output directory
+    """
+    # list of images to average - a bit hacky
+    tile_list = []
+    for image in image_list:
+        tile_path = os.path.join(input_dir, image[:-5])
+        for file in os.listdir(tile_path):
+            if os.path.isfile(os.path.join(tile_path, file)) and file.endswith('.tif'):
+                tile_list.append(os.path.join(tile_path, file))
+
+    # averages to generate based on extension (stacked, ndvi, etc...)
+    file_extensions = list(set(tile.split('_')[-1] for tile in tile_list))
+    print(input_dir)
+    print(image_list)
+    print(file_extensions)
+
+    # sensing date of images
+    image_dates = [tile.split('/')[-1][11:19] for tile in image_list]
+
+    for extension in file_extensions:
+        # build image list from extension
+        tiles = [tile for tile in tile_list if tile.endswith(extension)]
+        print('Averaging: ', extension[:-4])
+        # get tile metadata
+        tile_meta = rm.get_band_meta(tiles[0])
+        arrays = []
+        for band in range(1, tile_meta['band_num']+1):
+            print('\t Processing Band: ', band)
+            band_list = [rm.read_band(tile, band) for tile in tiles]
+            band_avg = np.nanmean(band_list, axis=0)
+            arrays.append(band_avg)
+
+        output_image = output_dir + os.sep + '_'.join(image_dates + ['averaged', extension])
+        rm.write_image(output_image, 'GTiff', tile_meta, arrays)
 
 # processing the tile
 class ProcessTile():
@@ -61,18 +147,16 @@ class ProcessTile():
         if self.config.ard_settings['atm-corr'] == True:
             print('RUNNING ATMOSPHERIC CORRECTION - SEN2COR')
             system_command = ['L2A_Process', "--resolution", '10', input_tile]
-            rm.system_call(system_command)
+            system_call(system_command)
 
             self.tile_name = self._get_l2a_name(self.tile_name)
-            all_bands = self._get_boa_band_pathes(self._get_metadata_xml(input_tile))
+            all_bands = self._get_boa_band_pathes(self._get_metadata_xml(self.tile_name))
             ref_bands = self._subset_boa_bands(self.bands, all_bands)
-
-            copytree(self.tile_name, self.output_dir + os.sep + os.path.split(input_tile)[1])
 
         # SET OUTPUT DIRECTORY - happens after atm_corr in case of tile renaming (L1C -> L2A)
         self.output_dir = self.output_dir + os.sep + os.path.split(self.tile_name)[1][:-5]
         if not os.path.exists(self.output_dir):
-            os.mkdirs(self.output_dir)
+            os.makedirs(self.output_dir)
 
         # if output spatial reference is missing epsg code is tile epsg code
         if self.image_properties['t_srs'] == False:
@@ -83,7 +167,7 @@ class ProcessTile():
         for key in self.bands:
             if rm.get_band_meta(ref_bands[key])['geotransform'][1] != self.image_properties['resolution']:
                 print('RESAMPLING BAND TO TARGET RESOLUTION: %s' % (key))
-                resampled_image = self.rename_image(work_dir, '.tif', os.path.split(os.path.splitext(input_tile)[0])[1], key)
+                resampled_image = self.rename_image(work_dir, '.tif', os.path.split(os.path.splitext(self.tile_name)[0])[1], key)
                 ref_bands[key] = rm.resample_image(ref_bands[key], resampled_image, self.image_properties)
 
         # DERIVING INDICES
@@ -114,19 +198,19 @@ class ProcessTile():
                 for key in vi_bands.keys():
                     if (rm.get_band_meta(vi_bands[key])['geotransform'][1] != self.config.output_image_settings['resolution']):
                         print('RESAMPLING BAND TO TARGET RESOLUTION: %s' % (key))
-                        resampled_image = self.rename_image(work_dir, '.tif', os.path.split(os.path.splitext(input_tile)[0])[1], key)
+                        resampled_image = self.rename_image(work_dir, '.tif', os.path.split(os.path.splitext(self.tile_name)[0])[1], key)
                         vi_bands[key] = rm.resample_image(vi_bands[key], resampled_image, self.image_properties)
 
                 # write index
                 band_meta = rm.get_band_meta(vi_bands[key])
                 band_meta['dtype'] = 6
                 if index == 'vdvi':
-                    derived_index = rm.calculate_vdvi(vi_bands[vi_band_dict[index][0]], vi_bands[vi_band_dict[index][1]], vi_bands[vi_band_dict[index][2]])
+                    derived_index = rm.vdvi(vi_bands[vi_band_dict[index][0]], vi_bands[vi_band_dict[index][1]], vi_bands[vi_band_dict[index][2]])
                 elif index == 'bsi':
-                    derived_index = rm.calculate_bsi(vi_bands[vi_band_dict[index][0]], vi_bands[vi_band_dict[index][1]], vi_bands[vi_band_dict[index][2]], vi_bands[vi_band_dict[index][3]])
+                    derived_index = rm.bare_soil(vi_bands[vi_band_dict[index][0]], vi_bands[vi_band_dict[index][1]], vi_bands[vi_band_dict[index][2]], vi_bands[vi_band_dict[index][3]])
                 else:
                     derived_index = rm.normalized_diff(vi_bands[vi_band_dict[index][0]], vi_bands[vi_band_dict[index][1]])
-                derived_index_image = self.rename_image(work_dir, '.tif', os.path.splitext(os.path.split(input_tile)[1])[0], index)
+                derived_index_image = self.rename_image(work_dir, '.tif', os.path.splitext(os.path.split(self.tile_name)[1])[0], index)
 
                 rm.write_image(derived_index_image, "GTiff", band_meta, [derived_index])
 
@@ -246,7 +330,7 @@ class ProcessTile():
                     print('STACKING BAND %s' % (key))
                     band_meta = rm.get_band_meta(ref_bands[key])
                     arrays.append(rm.read_band(ref_bands[key]))
-                stacked_image = self.rename_image(work_dir, '.tif', os.path.splitext(os.path.split(input_tile)[1])[0], 'stacked')
+                stacked_image = self.rename_image(work_dir, '.tif', os.path.splitext(os.path.split(self.tile_name)[1])[0], 'stacked')
                 rm.write_image(stacked_image, "GTiff", band_meta, arrays)
 
                 ref_bands = {}
@@ -263,7 +347,7 @@ class ProcessTile():
 
         # CLIPPING / CROP_TO_CUTLINE
         if self.config.ard_settings['clip'] == True:
-            self.crop_to_cutline(self.output_dir, self.input_features)
+            rm.crop_to_cutline(self.output_dir, self.input_features)
 
     # metadata xml and parsing operations
     def _get_l2a_name(self, input_tile):
@@ -318,44 +402,6 @@ class ProcessTile():
         new_name = basedir + os.sep + "_".join(argv) + extension
         return(new_name)
 
-    def build_mosaic(self, image_dir, mosaic_settings):
-        # list of images to mosaic
-        tile_list = []
-        for image in mosaic_settings['image-list']:
-            tile_path = os.path.join(image_dir, image[:-5])
-            for file in os.listdir(tile_path):
-                if os.path.isfile(os.path.join(tile_path, file)) and file.endswith('.tif'):
-                    tile_list.append(os.path.join(tile_path, file))
-
-        # mosaics to build based on extension (stacked, ndvi, etc...)
-        file_extensions = list(set(tile.split('_')[-1] for tile in tile_list))
-        # sensing date of images
-        image_dates = [tile[11:19] for tile in mosaic_settings['image-list']]
-        # output directory
-        output_dir = "/output/mosaic"
-
-        for extension in file_extensions:
-            # create a list of images to mosaic
-            to_mosaic = [tile for tile in tile_list if tile.endswith(extension)]
-            # order the list of images to mosaic (last image in is the image on top)
-            mosaic_bands = [x for _, x in sorted(zip(mosaic_settings['image-list'], to_mosaic))]
-            # build mosaic
-            mosaic_vrt = output_dir + os.sep + '_'.join(image_dates + ['mosaic', extension[:-4]]) + '.vrt'
-            system_command = ['gdalbuildvrt', mosaic_vrt, '-r', mosaic_settings['resampling-method']] + mosaic_bands
-            system_call(system_command)
-            # convert mosaic to geotiff
-            output_image = mosaic_vrt[:-4] + '.tif'
-            system_command = ["gdal_translate", "-of", "GTiff", mosaic_vrt, output_image]
-            system_call(system_command)
-
-        # cleanup
-        for file in os.listdir(output_dir):
-            if file.endswith('.vrt'):
-                try:
-                    os.remove(output_dir + os.sep + file)
-                except Exception:
-                    print('unable to remove: ', file)
-
     def calibrate(self, band_path):
         calibrated_band = work_dir + os.sep + os.path.split(os.path.splitext(band_path)[0])[1] + '.tif'
         band_meta = rm.get_band_meta(band_path)
@@ -365,101 +411,6 @@ class ProcessTile():
         band_meta['dtype'] = 6
         self.write_image(calibrated_band, 'GTiff', band_meta, [dst])
         return(calibrated_band)
-
-    def crop_to_cutline(self, image_dir, input_features):
-        print('CROPPING TO CUTLINE')
-
-        # generate image list & get src epsg
-        image_list = glob.glob(os.path.join(image_dir, '*.tif'))
-        t_srs = self._get_raster_epsg(image_list[0])
-        features_epsg = self.get_vector_epsg(input_features)
-        # reprojecting input_features to target_srs if not common projection
-        if features_epsg != t_srs:
-            print('REPROJECTING INPUT FEATURES TO TARGET PROJECTION')
-            t_srs_feature_aoi = work_dir + os.sep + \
-                "_".join([os.path.splitext(os.path.split(input_features)[1])[0], t_srs]) + '.geojson'
-            system_command = ['ogr2ogr', "-overwrite", "-t_srs", 'EPSG:' + t_srs, t_srs_feature_aoi, input_features]
-            system_call(system_command)
-            input_features = t_srs_feature_aoi
-
-        src = ogr.Open(input_features, 0)
-        layer = src.GetLayer()
-        count = layer.GetFeatureCount()
-        for feature in layer:
-            feature_id = feature.GetFID()
-            feature_shp = work_dir + os.sep + '_'.join([os.path.splitext(os.path.split(
-                input_features)[1])[0], 'FEATURE_ID', str(feature_id)]) + '.geojson'
-            if not os.path.exists(feature_shp):
-                ftr_drv = ogr.GetDriverByName('Esri Shapefile')
-                out_feature = ftr_drv.CreateDataSource(feature_shp)
-                lyr = out_feature.CreateLayer('poly', layer.GetSpatialRef(), ogr.wkbPolygon)
-                feat = lyr.CreateFeature(feature.Clone())
-                out_feature = None
-
-            # cropping reflectance band image chips
-            for image in image_list:
-                subdir = image_dir + os.sep + 'clipped'
-                if not os.path.exists(subdir):
-                    os.mkdir(subdir)
-                if count == 1:
-                    image_chip = subdir + os.sep + \
-                        '_'.join([os.path.split(os.path.splitext(image)[0])[1], 'clipped']) + '.tif'
-                if count > 1:
-                    image_chip = subdir + os.sep + '_'.join([os.path.split(os.path.splitext(
-                        image)[0])[1], 'FEATURE_ID', str(feature_id), 'clipped']) + '.tif'
-                # cropping to cutline bands
-                system_command = ['gdalwarp', "-cutline", feature_shp,
-                                  '-crop_to_cutline', image, image_chip, '-overwrite']
-                system_call(system_command)
-
-    def compute_average(self, image_dir, mosaic_dir, average_settings):
-
-        # list of images to mosaic
-        tile_list = []
-        for image in average_settings['image-list']:
-            tile_path = os.path.join(image_dir, image[:-5])
-            for file in os.listdir(tile_path):
-                if os.path.isfile(os.path.join(tile_path, file)) and file.endswith('.tif'):
-                    tile_list.append(os.path.join(tile_path, file))
-
-        # averages to generate based on extension (stacked, ndvi, etc...)
-        file_extensions = list(set(tile.split('_')[-1] for tile in tile_list))
-
-        # sensing date of images
-        image_dates = [tile.split('/')[-1][11:19]
-                       for tile in average_settings['image-list']]
-
-        # include images from mosaic folder
-        if average_settings['include-mosaic']:
-            mosaic_list = [os.path.join(mosaic_dir, file) for file in os.listdir(mosaic_dir)
-                           if os.path.isfile(os.path.join(mosaic_dir, file))
-                           and 'mosaic' in file and file.endswith('tif')]
-            tile_list = tile_list + mosaic_list
-            image_dates = image_dates + mosaic_list[0].split('/')[-1].split('_')[:-2]
-
-        output_dir = "/output/average"
-
-        for extension in file_extensions:
-            # build image list from extension
-            tiles = [tile for tile in tile_list if tile.endswith(extension)]
-            # read in images
-            array_list = [self.read_image(x) for x in tiles]
-
-            output_arr = []
-            band_count = array_list[0].shape[0]
-            for i in range(0, band_count):
-                band_list = [img[i, :, :] for img in array_list]
-                output_arr.append(np.nanmean(band_list, axis=0))
-
-            # create output image
-            output_image = output_dir + os.sep + '_'.join(image_dates + ['average', extension])
-            # write image
-            with rio.open(tiles[0]) as src:
-                meta = src.meta
-            meta['driver'] = 'GTiff'
-            meta['dtype'] = 'float32'
-            with rio.open(output_image, 'w', **meta) as dst:
-                dst.write(output_arr.astype(rio.float32))
 
     def get_band_arrays(self, bands):
         band_arrays = []
@@ -502,7 +453,7 @@ if __name__ == "__main__":
     # PROCESS TILES
     for image_config in ard_settings.image_list:
         input_tile = data_dir + os.sep + image_config.tile_name
-        if os.path.isdir(input_tile) == True:
+        if os.path.isdir(input_tile):
             print('\n----------------------------------------------------------------------\n')
             print('PROCESSING IMAGE: {}\n'.format(image_config.tile_name))
             pg = ProcessTile(image_config)
@@ -510,9 +461,15 @@ if __name__ == "__main__":
 
             # update L1C tile name to L2A tile name
             if pg.tile_name != image_config.tile_name:
-                l2a_names[image_config.tile_name] = pg.tile_name
+                l2a_names[image_config.tile_name] = os.path.split(pg.tile_name)[1]
         else:
             print('Unable to process tile:', image_config.tile_name)
+
+    if ard_settings.average_settings['compute-average'] == True:
+        for key, val in l2a_names.items():
+            if key in ard_settings.average_settings['image-list']:
+                ard_settings.average_settings['image-list'].remove(key)
+                ard_settings.average_settings['image-list'].append(val)
 
     # MOSAIC IMAGES
     if ard_settings.mosaic_settings['build-mosaic'] == True:
@@ -522,7 +479,7 @@ if __name__ == "__main__":
             os.mkdir(mosaic_dir)
 
         # update L1C product name to Sen2Cor corrected L2A name
-        for key, val in l2a_names:
+        for key, val in l2a_names.items():
             if key in ard_settings.mosaic_settings['image-list']:
                 ard_settings.mosaic_settings['image-list'].remove(key)
                 ard_settings.mosaic_settings['image-list'].append(val)
@@ -532,7 +489,7 @@ if __name__ == "__main__":
 
         # clip image chips
         if ard_settings.mosaic_settings['clip'] == True:
-            pg.crop_to_cutline(mosaic_dir, aoi_file)
+            rm.crop_to_cutline(mosaic_dir, aoi_file)
 
     # AVERAGE IMAGES
     if ard_settings.average_settings['compute-average'] == True:
@@ -542,9 +499,12 @@ if __name__ == "__main__":
             os.mkdir(average_dir)
 
         # update L1C product name to Sen2Cor corrected L2A name
-        for key, val in l2a_names:
+        for key, val in l2a_names.items():
             if key in ard_settings.average_settings['image-list']:
                 ard_settings.average_settings['image-list'].remove(key)
                 ard_settings.average_settings['image-list'].append(val)
 
-        pg.compute_average(output_dir, mosaic_dir, ard_settings.average_settings)
+        compute_average(output_dir, ard_settings.average_settings['image-list'], average_dir)
+
+        if ard_settings.average_settings['clip'] == True:
+            rm.crop_to_cutline(average_dir, aoi_file)

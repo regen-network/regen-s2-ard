@@ -1,0 +1,64 @@
+# Woodburn Cattle Project
+# Image Timeframe: Spring 2020
+
+tile-list:
+  tile-1:
+    # name of the tile
+    # cloud free tile over woodburn
+    "tile-name" :
+
+    # defining the ard operations, set as true-false
+    ard-settings:
+      "atm-corr" :
+      "cloud-mask" :
+      "stack" :
+      "calibrate" :
+      "clip" : true
+      "derived-index" :
+
+    # pixel values to keep (aka. clear pixels)
+    cloud-mask-settings:
+      #"sen2cor-scl-codes" : [4, 5]
+      #"fmask-codes" : [1]
+
+    output-image-settings:
+      # bands to stack
+      "bands" : ["B02", "B03", "B04"]
+      # derived indices to calculate
+      "vi" : ["ndvi"]
+      # target spatial reference system - epsg code i.e. 3857
+      "t-srs" : False
+      # output image resolution
+      "resolution" : 10
+      # method for resampling bands when resolution changes or reprojection
+      "resampling-method" : "bilinear"
+
+      # <--- ADD MORE TILES HERE --->
+
+# mosaic settings
+mosaic-settings:
+  # build mosaic
+  "build-mosaic" : false
+  # method for resampling bands during a mosaic (default is nearest)
+  "resampling-method" : "cubic"
+  # clip to cutline
+  "clip" : true
+  # image to clip to (fill in as false to clip to the file passed in as a CLA)
+  "aoi-file" : "woodburn_buffer.gpkg"
+  # ordered list of images to mosaic - images are stacked w/last image on top
+  image-list:
+    1: ~
+    2: ~
+    # <-- ADD MORE TILES HERE -->
+
+# image average settings
+average-settings:
+  # average images
+  "compute-average" : true
+  # crop to cutline
+  "clip" :  true
+  # images to include in average
+  image-list:
+    1: ~
+    2: ~
+    # <-- ADD MORE TILES HERE -->

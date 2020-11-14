@@ -447,7 +447,7 @@ if __name__ == "__main__":
     mosaic_dir = "/output/mosaic"
     average_dir = "/output/average"
 
-    # L1C --> L2A name updates
+    # L1C --> L2A name updates - might be a better solution
     l2a_names = {}
 
     # PROCESS TILES
@@ -465,6 +465,7 @@ if __name__ == "__main__":
         else:
             print('Unable to process tile:', image_config.tile_name)
 
+    # update L1C product name to L2A name if Sen2Cor atmospheric correction occured
     if ard_settings.average_settings['compute-average'] == True:
         for key, val in l2a_names.items():
             if key in ard_settings.average_settings['image-list']:
@@ -478,18 +479,19 @@ if __name__ == "__main__":
         if not os.path.exists(mosaic_dir):
             os.mkdir(mosaic_dir)
 
-        # update L1C product name to Sen2Cor corrected L2A name
+        # update L1C product name to L2A name if Sen2Cor atmospheric correction occured
         for key, val in l2a_names.items():
             if key in ard_settings.mosaic_settings['image-list']:
                 ard_settings.mosaic_settings['image-list'].remove(key)
                 ard_settings.mosaic_settings['image-list'].append(val)
 
         # build tile mosaic
-        build_mosaic(output_dir, ard_settings.mosaic_settings)
+        build_mosaic(output_dir, ard_settings.mosaic_settings['image-list'], mosaic_dir, ard_settings.mosaic_settings['resampling-method'])
 
         # clip image chips
         if ard_settings.mosaic_settings['clip'] == True:
-            rm.crop_to_cutline(mosaic_dir, aoi_file)
+            mosaic_aoi_file = os.path.join(data_dir, ard_settings.mosaic_settings['aoi-file'])
+            rm.crop_to_cutline(mosaic_dir, mosaic_aoi_file)
 
     # AVERAGE IMAGES
     if ard_settings.average_settings['compute-average'] == True:

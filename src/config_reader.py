@@ -1,6 +1,7 @@
 from ruamel_yaml import YAML
 import os
 
+
 # reading the configuration file
 class ConfigReader(object):
 
@@ -10,48 +11,51 @@ class ConfigReader(object):
             yaml = YAML()
             config = yaml.load(stream)
 
-        # validate mosaic settings
-        try:
-            self.mosaic_keywords = ["build-mosaic", "resampling-method", "clip"]
-            self.mosaic_settings = {}
-            for key in self.mosaic_keywords:
-                if key in dict(config['mosaic-settings']).keys():
-                    self.mosaic_settings[key] = dict(config['mosaic-settings'])[key]
-                # default settings are always false
-                if key not in dict(config['mosaic-settings']).keys():
-                    self.mosaic_settings[key] = False
-
-            self.mosaic_settings['image-list'] = []
-            for i in config['mosaic-settings']['image-list']:
-                self.mosaic_settings['image-list'].append(config['mosaic-settings']['image-list'][i])
-
-        except Exception:
-            raise IOError('in YAML file mosaic-settings not defined')
-
-        try:
-            self.average_keywords = ["compute-average", "include-mosaic", "clip"]
-            self.average_settings = {}
-            self.average_settings['image-list'] = []
-
-            for key in self.average_keywords:
-                if key in dict(config['average-settings']).keys():
-                    self.average_settings[key] = dict(config['average-settings'])[key]
-                # default settings are always False
-                if key not in dict(config['average-settings']).keys():
-                    self.average_settings[key] = False
-
-            for i in config['average-settings']['image-list']:
-                self.average_settings['image-list'].append(config['average-settings']['image-list'][i])
-
-        except Exception:
-            raise IOError('in YAML file average-settings not defined')
-
         # error handling happens in image reader
         self.image_list = []
-        for image_yaml in config['tile-list']:
-            image_config = config['tile-list'][image_yaml]
-            image_settings = ImageReader(image_config, geojson_file)
-            self.image_list.append(image_settings)
+        for tile_args in config['tile-list']:
+            tile_config = config['tile-list'][tile_args]
+            tile_settings = ImageReader(tile_config, geojson_file)
+            self.image_list.append(tile_settings)
+
+        # parse mosaic settings
+        if config['mosaic-settings']['build-mosaic'] == True:
+            try:
+                self.mosaic_keywords = ["build-mosaic", "resampling-method", "clip"]
+                self.mosaic_settings = self.parse_settings(self.mosaic_keywords, config['mosaic-settings'])
+                self.mosaic_settings['image-list'] = []
+                for i in config['mosaic-settings']['image-list']:
+                    self.mosaic_settings['image-list'].append(config['mosaic-settings']['image-list'][i])
+
+            except Exception:
+                raise IOError('in YAML file mosaic-settings not defined')
+        else:
+            self.mosaic_settings = {}
+            self.mosaic_settings['build-mosaic'] = False
+
+        # parse average settings
+        if config['average-settings']['compute-average'] is True:
+            try:
+                self.average_keywords = ["compute-average", "include-mosaic", "clip"]
+                self.average_settings = self.parse_settings(self.average_keywords, config['average-settings'])
+                self.average_settings['image-list'] = []
+                for i in config['average-settings']['image-list']:
+                    self.average_settings['image-list'].append(config['average-settings']['image-list'][i])
+
+            except Exception:
+                raise IOError('in YAML file average-settings not defined')
+
+        else:
+            self.average_settings = {}
+            self.average_settings['compute-average'] = False
+
+    def parse_settings(self, keywords, config):
+        param_dict = {}
+        for key in keywords:
+            if key in dict(config).keys():
+                param_dict[key] = dict(config)[key]
+        return param_dict
+
 
 # reading of image objects in config file
 class ImageReader(object):
@@ -64,18 +68,10 @@ class ImageReader(object):
         except Exception:
             raise IOError('in YAML file tile-name not defined')
 
-
         # validate ard-settings
         try:
-            self.ard_keywords = ["atm-corr", "cloud-mask", "stack", "calibrate", "clip", "derived-index", "include-in-mosaic", "include-in-average"]
-
-            self.ard_settings = {}
-            for key in self.ard_keywords:
-                if key in dict(config['ard-settings']).keys():
-                    self.ard_settings[key] = dict(config['ard-settings'])[key]
-                # default ard settings are always false
-                if key not in dict(config['ard-settings']).keys():
-                    self.ard_settings[key] = False
+            self.ard_keywords = ["atm-corr", "cloud-mask", "stack", "calibrate", "clip", "derived-index"]
+            self.ard_settings = self.parse_settings(self.ard_keywords, config['ard-settings'])
         except Exception:
             raise IOError('in YAML file ard-settings is not defined for: ', self.tile_name)
 
@@ -83,48 +79,40 @@ class ImageReader(object):
         if self.ard_settings['cloud-mask'] == True:
             try:
                 self.cloud_mask_keywords = ["sen2cor-scl-codes", "fmask-codes"]
-
-                self.cloud_mask_settings = {}
-                for key in self.cloud_mask_keywords:
-                    if key in dict(config['cloud-mask-settings']).keys():
-                        self.cloud_mask_settings[key] = dict(config['cloud-mask-settings'])[key]
-
-                    if key not in dict(config['cloud-mask-settings']).keys():
-                        self.cloud_mask_settings[key] = False
+                self.cloud_mask_settings = self.parse_settings(self.cloud_mask_keywords, config['cloud-mask-settings'])
             except Exception:
                 raise IOError('in YAML file cloud-mask-settings is not defined for: ', self.tile_name)
 
-        if self.ard_settings['cloud-mask'] == False:
+        else:
             self.cloud_mask_settings = False
 
         # validate output-image-settings
         try:
             self.output_image_keywords = ["bands", "vi", "resampling-method", "t-srs", "resolution"]
-
-            self.output_image_settings = {}
-            for key in self.output_image_keywords:
-                if key in dict(config['output-image-settings']).keys():
-                    self.output_image_settings[key] = dict(config['output-image-settings'])[key]
-                # default output_image_settings are always false
-                if key not in dict(config['output-image-settings']).keys():
-                    self.output_image_settings[key] = False
+            self.output_image_settings = self.parse_settings(
+                self.output_image_keywords, config['output-image-settings'])
 
             # default keywords settings
-            if 'bands' not in dict(config['output-image-settings']).keys():
-                self.output_image_settings['bands'] = [] # NIR-RED-GREEN Band Combinations
-            if 'resolution' not in dict(config['output-image-settings']).keys():
+            if 'bands' == False:
+                self.output_image_settings['bands'] = ['B02', 'B03', 'B04', 'B08']  # BLUE-GREEN-RED-NIR Band Combinations
+            if 'resolution' == False:
                 self.output_image_settings['resolution'] = 10
-            if 'resampling-method' not in dict(config['output-image-settings']).keys():
+            if 'resampling-method' == False:
                 self.output_image_settings['resampling-method'] = 'near'
 
             if os.path.exists(geojson_file):
                 self.output_image_settings['input-features'] = geojson_file
-            if not os.path.exists(geojson_file):
+            else:
                 self.output_image_settings['input-features'] = False
 
-            if (self.ard_settings['clip'] == True) and (self.output_image_settings['input-features'] == False):
-                print('in YAML file input_features as the crop-to-cutline is not defined')
-                exit(1)
-
         except Exception:
-            print('in YAML file output-image-settings is not defined for: {}. Default settings are used.'.format(self.tile_name))
+            print('in YAML file output-image-settings are not defined for: {}. Default settings are used.'.format(self.tile_name))
+
+    def parse_settings(self, keywords, config):
+        param_dict = {}
+        for key in keywords:
+            if key in dict(config).keys():
+                param_dict[key] = dict(config)[key]
+            if key not in dict(config).keys():
+                param_dict[key] = False
+        return param_dict

@@ -18,13 +18,12 @@ RUN curl -LO http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.s
 RUN bash Miniconda3-latest-Linux-x86_64.sh -p /miniconda -b
 RUN rm Miniconda3-latest-Linux-x86_64.sh
 ENV PATH=/miniconda/bin:${PATH}
-#RUN conda update -y conda
 
 # CONDA INSTALL PACKAGES
-RUN conda install -c conda-forge gdal
+RUN conda install python=3.7
+RUN conda install -c conda-forge gdal=2.4.2
 RUN conda install -c conda-forge python-fmask
 RUN conda install -c conda-forge ruamel.yaml=0.15.96
-RUN conda install -c conda-forge rasterio
 
 ENV HOME=/app
 WORKDIR $HOME

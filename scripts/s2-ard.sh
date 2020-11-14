@@ -1,39 +1,43 @@
 #!/bin/bash
 
-# pull Regen Network Sentinel-2 ARD 
+#pull Regen Network Sentinel-2 ARD
 docker pull regennetwork/s2-ard
 
-# run Regen Network Sentinel-2 ARD 
-docker run --name s2-ard -dit regennetwork/s2-ard
+# run Regen Network Sentinel-2 ARD
+docker run --name s2-ard -dit ard
+start=$SECONDS
 
 # parse named argument options --tile, --config and --aoi
 while :; do
     case $1 in
-        -t|--tile)
+        -t|--tiles)
                 if [ "$2" ]; then
-                        TILE=$2
-			echo "TILE : $TILE"
+                        TILES=$2
+			echo "Data Directory : $TILES"
                         shift
                 else
-                        die 'ERROR: "--tile" requires a non-empty option argument.'
+                        echo 'ERROR: "--tile" requires a non-empty option argument.'
+                        exit 1
                 fi
                 ;;
         -c|--config)
                 if [ "$2" ]; then
                         CONFIG=$2
-			echo "Config : $CONFIG"
+			echo "Config File : $CONFIG"
                         shift
                 else
-                        die 'ERROR: "--config" requires a non-empty option argument.'
+                        echo 'ERROR: "--config" requires a non-empty option argument.'
+                        exit 1
                 fi
                 ;;
         -a|--aoi)
                 if [ "$2" ]; then
                         AOI=$2
-			echo "AOI : $AOI"
+			echo "AOI File : $AOI"
                         shift
                 else
-                        die 'ERROR: "--aoi" requires a non-empty option argument.'
+                        echo 'ERROR: "--aoi" requires a non-empty option argument.'
+                        exit 1
                 fi
                 ;;
         *)
@@ -43,14 +47,14 @@ while :; do
     shift
 done
 
-# copy config and aoi into running container 
-if [ -d $TILE ];
+# copy config and aoi into running container
+if [ -d $TILES ]
 then
-      echo "Copying SAFE Directory"
-      docker cp $TILE s2-ard:work
-      TILE="/work/"`basename "$TILE"`
+      echo "Copying data directory"
+      docker cp $TILES s2-ard:work
+      TILES="/work/"`basename "$TILES"`
 else
-      echo "Not a SAFE Directory"
+      echo "Data directory invalid"
 fi
 
 if [ -z "$CONFIG" ]
@@ -69,11 +73,18 @@ else
       docker cp $AOI s2-ard:app/aoi.geojson
 fi
 
-# execute pre-processing of the data product (tile)
-docker exec -it s2-ard bash -c "python /app/ard.py --tile "$TILE""
+# execute pre-processing of the data product (tile or batch)
+docker exec -it s2-ard bash -c "python /app/ard.py --tiles "$TILES""
 
 # copy output files/folders to host from s2-ard container
+echo "Copying files from docker container"
 docker cp s2-ard:output $PWD
 
 # remove files/folder from work and output directory on container
 docker exec s2-ard sh -c 'rm -rf /output/* /work/*'
+
+docker stop s2-ard
+
+duration=$((SECONDS-start))
+minutes=$((duration/60))
+echo "Time: $minutes minutes $((duration%60)) seconds"

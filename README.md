@@ -295,7 +295,7 @@ average-settings:
 
 1. Execute **s2-ard.sh** with the directory containing the two tiles, the config file, and the aoi file
    ```
-   sh s2-ard.sh --tile data/ --config config.yml --aoi data/wilmot_extent.geojson
+   sh s2-ard.sh --tiles data/ --config config.yml --aoi data/wilmot_extent.geojson
    ```
    Processing can take up from a few minutes to about an hour depending on the internet connection, and computer resources.
 

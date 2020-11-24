@@ -292,7 +292,7 @@ def bare_soil(blue, red, nir, swir):
     """
     b2, b4, b8, b11 = read_band(blue), read_band(red), read_band(nir), read_band(swir)
     with np.errstate(divide="ignore"):
-        bsi = ((b11 - b4) - (b8 + b2)) / ((b11 - b4) + (b8 + b2)).astype(np.float32)
+        bsi = ((b11 + b4) - (b8 + b2)) / ((b11 + b4) + (b8 + b2)).astype(np.float32)
     # mask out invalid values
     bsi[np.isinf(bsi)] = np.nan
     if np.isnan(bsi).any():

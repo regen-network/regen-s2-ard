@@ -1,4 +1,4 @@
-# User Guide
+# Sentinel-2 Analysis Ready Data (S2-ARD)
 
 ## Background
 

@@ -1,10 +1,12 @@
 #!/bin/bash
 
 #pull Regen Network Sentinel-2 ARD
-docker pull regennetwork/s2-ard
+#docker pull regennetwork/s2-ard
 
 # run Regen Network Sentinel-2 ARD
-docker run --name s2-ard -dit ard
+#docker run --name s2-ard -dit ard
+#docker run -dit -v "C:\Users\sambe\Documents\regen\grasslands_projects\s2-ard\src:/app/" --name s2-ard ard
+docker restart s2-ard
 start=$SECONDS
 
 # parse named argument options --tile, --config and --aoi

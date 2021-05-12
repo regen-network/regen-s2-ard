@@ -175,7 +175,7 @@ class ProcessTile():
             print('DERIVE INDEX / INDICES')
             vi_band_dict = {
                             'ndvi': ['B08', 'B04'],
-                            'ndwi': ['B08', 'B11'],
+                            'ndmi': ['B08', 'B11'],
                             'ndti': ['B11', 'B12'],
                             'crc': ['B11', 'B02'],
                             'vdvi': ['B02', 'B03', 'B04'],
@@ -225,7 +225,7 @@ class ProcessTile():
                 system_command = ['L2A_Process', "--sc_only", input_tile]
                 system_call(system_command)
 
-            scl_image = '.'.join([self._get_boa_band_pathes(self._get_metadata_xml(input_tile))['SCL_20m']])
+            scl_image = '.'.join([all_bands['SCL_20m']])
             # resampling to target resolution if bands/image does not meet target resolution
             if rm.get_band_meta(scl_image)['geotransform'][1] != self.image_properties['resolution']:
                 # changing resampling to near since cloud mask image contains discrete values
@@ -252,7 +252,7 @@ class ProcessTile():
             if self.derived_indices != False:
                 for key in self.derived_indices:
                     band_meta = rm.get_band_meta(derived_bands[key])
-                    masked_array = rm.mask_array(mask, self.read_band(derived_bands[key]))
+                    masked_array = rm.mask_array(mask, rm.read_band(derived_bands[key]))
                     masked_image = self.rename_image(work_dir, '.tif', os.path.splitext(os.path.basename(derived_bands[key]))[0], 'scl', 'masked')
 
                     rm.write_image(masked_image, "GTiff", band_meta, [masked_array])
@@ -490,7 +490,10 @@ if __name__ == "__main__":
 
         # clip image chips
         if ard_settings.mosaic_settings['clip'] == True:
-            mosaic_aoi_file = os.path.join(data_dir, ard_settings.mosaic_settings['aoi-file'])
+            if ard_settings.mosaic_settings['aoi-file'] == False:
+                mosaic_aoi_file = aoi_file
+            else:
+                mosaic_aoi_file = os.path.join(data_dir, ard_settings.mosaic_settings['aoi-file'])
             rm.crop_to_cutline(mosaic_dir, mosaic_aoi_file)
 
     # AVERAGE IMAGES

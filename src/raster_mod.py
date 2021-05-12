@@ -279,7 +279,7 @@ def bare_soil(blue, red, nir, swir):
 
         Equation:
         ---------
-        BSI = ((SWIR - Red) - (NIR + Blue)) / ((SWIR - Red) + (NIR + Blue))
+        BSI = ((SWIR + Red) - (NIR + Blue)) / ((SWIR + Red) + (NIR + Blue))
 
         Parameters:
         -----------
@@ -290,15 +290,47 @@ def bare_soil(blue, red, nir, swir):
         numpy array
             BSI
     """
-    b2, b4, b8, b11 = read_band(blue), read_band(red), read_band(nir), read_band(swir)
+    b2, b4, b8, b11 = read_band(blue) / float(10000), read_band(red) / float(10000), read_band(nir) / float(10000), read_band(swir) / float(10000)
+    if not (b2.shape == b4.shape == b8.shape == b11.shape):
+        raise ValueError("Both arrays should have the same dimensions")
+
+    # Ignore warning for division by zero
     with np.errstate(divide="ignore"):
         bsi = ((b11 + b4) - (b8 + b2)) / ((b11 + b4) + (b8 + b2)).astype(np.float32)
-    # mask out invalid values
-    bsi[np.isinf(bsi)] = np.nan
-    if np.isnan(bsi).any():
-        bsi = np.ma.masked_invalid(bsi)
+        # mask out invalid values
+        bsi[np.isinf(bsi)] = np.nan
+        if np.isnan(bsi).any():
+            bsi = np.ma.masked_invalid(bsi)
 
     return bsi
+
+def bsi_2(blue, red, nir, swir):
+    """ (New?) Bare Soil Index (https://medium.com/sentinel-hub/area-monitoring-bare-soil-marker-608bc95712ae)
+
+        Equation:
+        ---------
+        BSI2 = (SWIR - Red) / (NIR + Blue)
+
+        Parameters:
+        -----------
+        blue, red, nir, swir : numpy array
+
+        Returns:
+        --------
+        numpy array
+            BSI2
+    """
+
+
+    blue_arr, red_arr, nir_arr, swir_arr = read_band(blue), read_band(red), read_band(nir), read_band(swir)
+    with np.errstate(divide="ignore"):
+        bsi_2 = ((swir_arr - red_arr) / (nir_arr + blue_arr))
+
+    bsi_2[np.isinf(bsi_2)] = np.nan
+    if np.isnan(bsi_2).any():
+        bsi_2 = np.ma.masked_invalid(bsi_2)
+
+    return bsi_2
 
 
 # vector operations

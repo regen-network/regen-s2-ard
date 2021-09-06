@@ -1,81 +1,52 @@
-# Config file for Wilmot Cattle Project
-# Image Dates: May 2017
-# Image Type: S2A-L2A
-
 # list of tiles to process
 tile-list:
   tile-1:
     # name of the tile
-    "tile-name" : "S2A_MSIL2A_20190521T235251_N0212_R130_T56JMM_20190522T014028.SAFE"
+    tile-name : S2A_MSIL2A_20200608T000251_N0214_R030_T56JMS_20200608T021427.SAFE
 
     # defining the ard operations
     ard-settings:
-      "atm-corr" : false
-      "cloud-mask" : false
-      "stack" : true
-      "calibrate" : false
-      "clip" : true
-      "derived-index" : true
+      atm-corr : false
+      cloud-mask : false
+      stack : true
+      calibrate : false
+      clip : true
+      derived-index : true
 
-    # pixel values in mask to keep (clear pixels)
+    # pixel values to keep (aka. clear pixels)
     cloud-mask-settings:
-      #"sen2cor-scl-codes" : [4, 5, 6, 7]
-      #"fmask-codes" : [1]
+      #sen2cor-scl-codes : [4, 5]
+      #fmask-codes : [1]
 
     output-image-settings:
       # bands to stack
-      "bands" : ["B02", "B03", "B04", "B05", "B06", "B08", "B11", "B12"]
+      bands : [B02, B03, B04, B05, B06, B07, B08, B8A, B11, B12]
       # derived indices to calculate
-      "vi" : ["ndvi", "vdvi", "bsi"]
-      # target spatial reference system - epsg code i. e. 3857
-      "t-srs" : False
+      vi : [ndvi, ndmi, bsi]
+      # target spatial reference system - epsg code i.e. 3857
+      t-srs : False
       # output image resolution
-      "resolution" : 10
+      resolution : 10
       # method for resampling bands when resolution changes or reprojection
-      "resampling-method" : "cubic"
-
-  tile-2:
-    # name of the tile
-    "tile-name" : "S2B_MSIL2A_20190506T235259_N0212_R130_T56JMM_20190522T085952.SAFE"
-
-    # defining the ard operations
-    ard-settings:
-      "atm-corr" : false
-      "cloud-mask" : false
-      "stack" : true
-      "calibrate" : false
-      "clip" : true
-      "derived-index" : true
-
-    # pixel values in mask to keep (clear pixels)
-    cloud-mask-settings:
-      #"sen2cor-scl-codes" : [4, 5, 6, 7]
-      #"fmask-codes" : [1]
-
-    output-image-settings:
-      # bands to stack
-      "bands" : ["B02", "B03", "B04", "B05", "B06", "B08", "B11", "B12"]
-      # derived indices to calculate
-      "vi" : ["ndvi", "vdvi", "bsi"]
-      # target spatial reference system - epsg code i. e. 3857
-      "t-srs" : False
-      # output image resolution
-      "resolution" : 10
-      # method for resampling bands when resolution changes or reprojection
-      "resampling-method" : "cubic"
+      resampling-method : bilinear
 
 # mosaic settings
 mosaic-settings:
   # build mosaic
-  "build-mosaic" : false
+  build-mosaic : false
+  # method for resampling bands during a mosaic (default is nearest)
+  resampling-method : nearest
+  # ordered list of images to mosaic - images are stacked w/last image on top
+  image-list:
+      1: ~
 
 # image average settings
 average-settings:
   # average images
-  "compute-average" : true
-  # clip to aoi
-  "clip" : true
+  compute-average : false
+  # include mosaic in average
+  include-mosaic : false
+  clip : true
   # images to include in average
   image-list:
-    1: "S2A_MSIL2A_20190521T235251_N0212_R130_T56JMM_20190522T014028.SAFE"
-    2: "S2B_MSIL2A_20190506T235259_N0212_R130_T56JMM_20190522T085952.SAFE"
+      1: ~

@@ -21,7 +21,7 @@ class ConfigReader(object):
         # parse mosaic settings
         if config['mosaic-settings']['build-mosaic'] == True:
             try:
-                self.mosaic_keywords = ["build-mosaic", "resampling-method", "clip"]
+                self.mosaic_keywords = ["build-mosaic", "resampling-method", "clip", "aoi-file"]
                 self.mosaic_settings = self.parse_settings(self.mosaic_keywords, config['mosaic-settings'])
                 self.mosaic_settings['image-list'] = []
                 for i in config['mosaic-settings']['image-list']:
@@ -36,7 +36,7 @@ class ConfigReader(object):
         # parse average settings
         if config['average-settings']['compute-average'] is True:
             try:
-                self.average_keywords = ["compute-average", "include-mosaic", "clip"]
+                self.average_keywords = ["compute-average", "clip"]
                 self.average_settings = self.parse_settings(self.average_keywords, config['average-settings'])
                 self.average_settings['image-list'] = []
                 for i in config['average-settings']['image-list']:
